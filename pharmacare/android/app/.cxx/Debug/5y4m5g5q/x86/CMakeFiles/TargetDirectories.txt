@@ -1,0 +1,2 @@
+C:/Users/omarz/OneDrive/Documentos/PharmaCareAI/pharmacare/android/app/.cxx/Debug/5y4m5g5q/x86/CMakeFiles/edit_cache.dir
+C:/Users/omarz/OneDrive/Documentos/PharmaCareAI/pharmacare/android/app/.cxx/Debug/5y4m5g5q/x86/CMakeFiles/rebuild_cache.dir

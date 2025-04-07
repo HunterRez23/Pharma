@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>67193969716-d5t3nlbf80vbvuntrdv48strimsr8sgd.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.67193969716-d5t3nlbf80vbvuntrdv48strimsr8sgd</string>
+	<key>API_KEY</key>
+	<string>AIzaSyB1F74Gglw9i5BNSxzLm26EKLuJebKIaHc</string>
+	<key>GCM_SENDER_ID</key>
+	<string>67193969716</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.example.pharmacare</string>
+	<key>PROJECT_ID</key>
+	<string>pharmacare-5face</string>
+	<key>STORAGE_BUCKET</key>
+	<string>pharmacare-5face.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:67193969716:ios:77a3d8722a3151e92fbe61</string>
+</dict>
+</plist>

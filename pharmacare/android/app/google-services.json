@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "67193969716",
+    "project_id": "pharmacare-5face",
+    "storage_bucket": "pharmacare-5face.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:67193969716:android:b840c5e8d19b73cf2fbe61",
+        "android_client_info": {
+          "package_name": "com.example.pharmacare"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAPqKvFLQANZ53IMyUVX7z1m41KtA0x8lE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
