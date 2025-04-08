@@ -180,7 +180,7 @@ class _SesionScreenState extends State<SesionScreen> {
                 Transform.translate(
                   offset: Offset(0.0, -50.0),
                   child: Image.asset(
-                    'image/med-wey.png',
+                    'image/Pharma.png',
                     width: 200.0,
                     height: 200.0,
                   ),

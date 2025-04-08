@@ -1,73 +1,45 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../firebase_options.dart';
 
-
-void main() {
-  runApp(PantallaPrincipal());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    runApp(PantallaPrincipal());
+  } catch (e) {
+    print('Error al inicializar Firebase: $e');
+  }
 }
 
 class PantallaPrincipal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(debugShowCheckedModeBanner: false, home: HomeScreen());
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: HomeScreen(),
+    );
   }
 }
 
 class HomeScreen extends StatelessWidget {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  final List<Map<String, String>> productos = [
-    {
-      'imagePath': 'image/Aspirina.png',
-      'productName': 'Aspirina',
-      'description': 'Descripción de Aspirina',
-      'price': '\$19.99',
-    },
-    {
-      'imagePath': 'image/Tylenol1.png',
-      'productName': 'Tylenol',
-      'description': 'Descripción de Tylenol',
-      'price': '\$19.99',
-    },
-    {
-      'imagePath': 'image/Paracetamol.png',
-      'productName': 'Paracetamol',
-      'description': 'Descripción de Paracetamol',
-      'price': '\$19.99',
-    },
-    {
-      'imagePath': 'image/Omeprazol.png',
-      'productName': 'Omeprazol',
-      'description': 'Descripción de Omeprazol',
-      'price': '\$19.99',
-    },
-  ];
 
-  final List<Map<String, String>> Productos2 = [
-    {
-      'imagePath': 'image/Levotiroxina.png',
-      'productName': 'Levotiroxina sodica',
-      'description': 'Descripción de Levotiroxina sodica',
-      'price': '\$29.99',
-    },
-    {
-      'imagePath': 'image/Amlodipina.png',
-      'productName': 'Amlodipina',
-      'description': 'Descripción de Amlodipina',
-      'price': '\$29.99',
-    },
-    {
-      'imagePath': 'image/Dexametasona.png',
-      'productName': 'Dexametasona',
-      'description': 'Descripción de Dexametasona',
-      'price': '\$29.99',
-    },
-    {
-      'imagePath': 'image/Ivermectina.png',
-      'productName': 'Ivermectina',
-      'description': 'Descripción de Ivermectina',
-      'price': '\$29.99',
-    },
-  ];
+  /// Obtiene los medicamentos desde Firestore, los mezcla aleatoriamente,
+  /// y retorna la lista.
+  Future<List<Map<String, dynamic>>> getMedicamentos() async {
+    QuerySnapshot snapshot =
+        await FirebaseFirestore.instance.collection('Medicamento').get();
+    List<Map<String, dynamic>> meds =
+        snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+    meds.shuffle(Random());
+    return meds;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,17 +60,15 @@ class HomeScreen extends StatelessWidget {
                         children: [
                           IconButton(
                             icon: const Icon(Icons.menu),
-                            color: const Color.fromARGB(255, 255, 255, 255),
+                            color: Colors.white,
                             onPressed: () {
                               _scaffoldKey.currentState?.openDrawer();
                             },
                           ),
-                          Expanded(
-                            child: SearchBox(),
-                          ),
+                          Expanded(child: SearchBox()),
                           IconButton(
                             icon: const Icon(Icons.filter_list),
-                            color: const Color.fromARGB(255, 255, 255, 255),
+                            color: Colors.white,
                             onPressed: () {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
@@ -117,117 +87,128 @@ class HomeScreen extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 0),
           Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  const SizedBox(height: 8.0),
-                  const ImageCarousel(
-                    images: [
-                      'image/Similares.jpg',
-                      'image/FarmaAhorro.jpg',
-                      'image/SuperFarma.jpg',
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: getMedicamentos(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text("No hay medicamentos disponibles"));
+                }
+                // Dividir la lista en dos partes sin repetir
+                List<Map<String, dynamic>> meds = snapshot.data!;
+                int half = (meds.length / 2).ceil();
+                List<Map<String, dynamic>> descuento = meds.sublist(0, half);
+                List<Map<String, dynamic>> comunes = meds.sublist(half);
+
+                return SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 8.0),
+                      const ImageCarousel(
+                        images: [
+                          'image/Similares.jpg',
+                          'image/FarmaAhorro.jpg',
+                          'image/SuperFarma.jpg',
+                        ],
+                      ),
+                      const SizedBox(height: 20.0),
+                      // Sección: Medicamentos en descuento
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        width: 350,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.black, width: 2),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8.0),
+                              child: Text(
+                                'Medicamentos en descuento',
+                                style: TextStyle(
+                                  color: Color.fromARGB(235, 109, 141, 190),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                ),
+                              ),
+                            ),
+                            ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: descuento.length,
+                              itemBuilder: (context, index) {
+                                final med = descuento[index];
+                                return GestureDetector(
+                                  onTap: () {
+                                    // Funcionalidad al pulsar
+                                  },
+                                  child: ProductRectangleWithText(
+                                    imageUrl: med['imagenUrl'] ?? '',
+                                    productName: med['nombreMedicamento'] ?? '',
+                                    description: med['descripcion'] ?? '',
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10.0),
+                      // Sección: Medicamentos comunes
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        width: 350,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.black, width: 2),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8.0),
+                              child: Text(
+                                'Medicamentos comunes',
+                                style: TextStyle(
+                                  color: Color.fromARGB(235, 109, 141, 190),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                ),
+                              ),
+                            ),
+                            ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: comunes.length,
+                              itemBuilder: (context, index) {
+                                final med = comunes[index];
+                                return GestureDetector(
+                                  onTap: () {
+                                    // Funcionalidad al pulsar
+                                  },
+                                  child: ProductRectangleWithText(
+                                    imageUrl: med['imagenUrl'] ?? '',
+                                    productName: med['nombreMedicamento'] ?? '',
+                                    description: med['descripcion'] ?? '',
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20.0),
                     ],
                   ),
-                  const SizedBox(height: 20.0),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    height: 615,
-                    width: 350,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.black, width: 2),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8.0),
-                          child: Text(
-                            'Medicamentos en descuento',
-                            style: TextStyle(
-                              color: Color.fromARGB(235, 109, 141, 190),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: Productos2.length,
-                            itemBuilder: (context, index) {
-                              final nuevoProducto = Productos2[index];
-                              return GestureDetector(
-                                onTap: () {
-                                  
-                                },
-                                child: ProductRectangleWithText(
-                                  imagePath: nuevoProducto['imagePath']!,
-                                  productName: nuevoProducto['productName']!,
-                                  description: nuevoProducto['description']!,
-                                  price: nuevoProducto['price']!,
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 10.0),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    height: 580,
-                    width: 350,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.black, width: 2),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8.0),
-                          child: Text(
-                            'Medicamentos comunes',
-                            style: TextStyle(
-                              color: Color.fromARGB(235, 109, 141, 190),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: productos.length,
-                            itemBuilder: (context, index) {
-                              final producto = productos[index];
-                              return GestureDetector(
-                                onTap: () {
-                                 
-                                },
-                                child: ProductRectangleWithText(
-                                  imagePath: producto['imagePath']!,
-                                  productName: producto['productName']!,
-                                  description: producto['description']!,
-                                  price: producto['price']!,
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
           ),
         ],
@@ -247,10 +228,7 @@ class HomeScreen extends StatelessWidget {
                   SizedBox(height: 8.0),
                   Text(
                     'Admin',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16.0,
-                    ),
+                    style: TextStyle(color: Colors.white, fontSize: 16.0),
                   ),
                 ],
               ),
@@ -287,7 +265,7 @@ class HomeScreen extends StatelessWidget {
               leading: const Icon(Icons.list),
               title: const Text('Categorias'),
               onTap: () {
-                
+                Navigator.pop(context);
               },
             ),
           ],
@@ -303,15 +281,13 @@ class HomeScreen extends StatelessWidget {
           children: <Widget>[
             IconButton(
               icon: const Icon(Icons.medical_services_outlined),
-              color: const Color.fromARGB(255, 255, 255, 255),
+              color: Colors.white,
               onPressed: () {},
             ),
             IconButton(
               icon: const Icon(Icons.healing_sharp),
-              color: const Color.fromARGB(255, 255, 255, 255),
-              onPressed: () {
-                
-              },
+              color: Colors.white,
+              onPressed: () {},
             ),
           ],
         ),
@@ -320,10 +296,10 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
+/// Clase para el rectángulo amarillo de cabecera
 class YellowRectangle extends StatelessWidget {
   final Widget child;
-
-  YellowRectangle({required this.child});
+  const YellowRectangle({required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -336,13 +312,14 @@ class YellowRectangle extends StatelessWidget {
   }
 }
 
+/// Caja de búsqueda (SearchBox)
 class SearchBox extends StatefulWidget {
   @override
   _SearchBoxState createState() => _SearchBoxState();
 }
 
 class _SearchBoxState extends State<SearchBox> {
-  TextEditingController _searchController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   bool _isSearchEmpty = true;
 
   @override
@@ -361,14 +338,11 @@ class _SearchBoxState extends State<SearchBox> {
           border: InputBorder.none,
           suffixIcon: IconButton(
             icon: const Icon(Icons.search),
-            color: const Color.fromARGB(255, 255, 255, 255),
+            color: Colors.white,
             onPressed: () {
               String searchTerm = _searchController.text;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Buscando: $searchTerm'),
-                ),
-              );
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(SnackBar(content: Text('Buscando: $searchTerm')));
             },
           ),
         ),
@@ -382,9 +356,9 @@ class _SearchBoxState extends State<SearchBox> {
   }
 }
 
+/// Carrusel de imágenes locales
 class ImageCarousel extends StatefulWidget {
   final List<String> images;
-
   const ImageCarousel({required this.images});
 
   @override
@@ -394,13 +368,14 @@ class ImageCarousel extends StatefulWidget {
 class _ImageCarouselState extends State<ImageCarousel> {
   late PageController _pageController;
   late int _currentIndex;
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
     _currentIndex = 0;
-    Timer.periodic(const Duration(seconds: 5), (Timer timer) {
+    _timer = Timer.periodic(const Duration(seconds: 5), (Timer timer) {
       if (mounted) {
         setState(() {
           _currentIndex = (_currentIndex + 1) % widget.images.length;
@@ -416,6 +391,7 @@ class _ImageCarouselState extends State<ImageCarousel> {
 
   @override
   void dispose() {
+    _timer?.cancel();
     _pageController.dispose();
     super.dispose();
   }
@@ -427,9 +403,6 @@ class _ImageCarouselState extends State<ImageCarousel> {
       child: PageView.builder(
         controller: _pageController,
         itemCount: widget.images.length,
-        onPageChanged: (index) {
-          setState(() {});
-        },
         itemBuilder: (context, index) {
           return RectangularImage(widget.images[index]);
         },
@@ -438,9 +411,9 @@ class _ImageCarouselState extends State<ImageCarousel> {
   }
 }
 
+/// Imagen rectangular que se usa en el carrusel (usando imágenes locales)
 class RectangularImage extends StatelessWidget {
   final String imagePath;
-
   const RectangularImage(this.imagePath);
 
   @override
@@ -472,138 +445,16 @@ class RectangularImage extends StatelessWidget {
   }
 }
 
-class IconRectangle extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.white,
-    );
-  }
-}
-
-class ProductRectangle extends StatelessWidget {
-  final String imagePath;
-  final String productName;
-  final String description;
-  final String price;
-
-  ProductRectangle({
-    required this.imagePath,
-    required this.productName,
-    required this.description,
-    required this.price,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.all(16.0),
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.5),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12.0),
-            child: Image.asset(
-              imagePath,
-              fit: BoxFit.cover,
-              width: 80.0,
-              height: 80.0,
-            ),
-          ),
-          const SizedBox(width: 16.0),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  productName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16.0,
-                  ),
-                ),
-                const SizedBox(height: 8.0),
-                Text(
-                  description,
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 14.0,
-                  ),
-                ),
-                const SizedBox(height: 8.0),
-                Text(
-                  'Precio: $price',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16.0,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class ProductSquare extends StatelessWidget {
-  final String imagePath;
-
-  const ProductSquare(this.imagePath);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.all(8.0),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20.0),
-        border: Border.all(color: Colors.white, width: 2.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.5),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18.0),
-        child: Image.asset(
-          imagePath,
-          fit: BoxFit.cover,
-          width: 100.0,
-          height: 100.0,
-        ),
-      ),
-    );
-  }
-}
-
+/// Rectángulo para mostrar cada medicamento con imagen y texto (sin precio)
 class ProductRectangleWithText extends StatelessWidget {
-  final String imagePath;
+  final String imageUrl;
   final String productName;
   final String description;
-  final String price;
 
   const ProductRectangleWithText({
-    required this.imagePath,
+    required this.imageUrl,
     required this.productName,
     required this.description,
-    required this.price,
   });
 
   @override
@@ -625,16 +476,31 @@ class ProductRectangleWithText extends StatelessWidget {
       ),
       child: Row(
         children: [
+          // Contenedor fijo para la imagen que se carga vía URL
           ClipRRect(
             borderRadius: BorderRadius.circular(12.0),
-            child: Image.asset(
-              imagePath,
-              fit: BoxFit.cover,
+            child: Container(
               width: 80.0,
               height: 80.0,
+              color: Colors.grey[300],
+              child: Image.network(
+                imageUrl.isNotEmpty
+                    ? imageUrl
+                    : 'https://via.placeholder.com/80',
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: Colors.grey,
+                    width: 80,
+                    height: 80,
+                    child: const Icon(Icons.broken_image, color: Colors.white),
+                  );
+                },
+              ),
             ),
           ),
           const SizedBox(width: 16.0),
+          // Información del medicamento
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -653,15 +519,6 @@ class ProductRectangleWithText extends StatelessWidget {
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14.0,
-                  ),
-                ),
-                const SizedBox(height: 8.0),
-                Text(
-                  'Precio: $price',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16.0,
                   ),
                 ),
               ],

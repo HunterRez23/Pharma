@@ -48,7 +48,8 @@ class _UploadScreenState extends State<UploadScreen> {
   final TextEditingController _sucursalController = TextEditingController();
 
   // Controladores para Inventario (subcolección dentro de Farmacias)
-  final TextEditingController _idFarmaciaController = TextEditingController(); // ID del documento de la farmacia para inventario
+  // Ahora se usará este campo para ingresar el valor del campo id_farmacia de la farmacia (no el documento ID)
+  final TextEditingController _idFarmaciaController = TextEditingController();
   final TextEditingController _cantidadController = TextEditingController();
   final TextEditingController _precioController = TextEditingController();
 
@@ -61,8 +62,25 @@ class _UploadScreenState extends State<UploadScreen> {
 
   // Función para obtener la lista de medicamentos usando el campo 'nombreMedicamento'
   Future<List<String>> _getMedicamentos() async {
-    QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('Medicamento').get();
-    return snapshot.docs.map((doc) => doc.get('nombreMedicamento') as String).toList();
+    try {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('Medicamento').get();
+      print("Docs encontrados: ${snapshot.docs.length}");
+      List<String> medicamentos = [];
+      for (var doc in snapshot.docs) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        if (data.containsKey('nombreMedicamento')) {
+          String med = data['nombreMedicamento'];
+          print("✔ Medicamento encontrado: $med");
+          medicamentos.add(med);
+        } else {
+          print("⚠ Documento sin campo 'nombreMedicamento': ${doc.id}");
+        }
+      }
+      return medicamentos;
+    } catch (e) {
+      print("Error en _getMedicamentos(): $e");
+      return [];
+    }
   }
 
   // Función para subir medicamento a Firestore
@@ -156,7 +174,8 @@ class _UploadScreenState extends State<UploadScreen> {
     });
   }
 
-  // Función para agregar un registro de inventario a una farmacia
+  // Función para agregar o actualizar un registro de inventario en la subcolección "Inventario"
+  // de una farmacia, buscando la farmacia por el campo 'id_farmacia'
   Future<void> _submitInventario() async {
     if (_idFarmaciaController.text.isEmpty ||
         _selectedMedicamento == null ||
@@ -172,30 +191,64 @@ class _UploadScreenState extends State<UploadScreen> {
       _isUploadingInventario = true;
     });
 
-    String farmaciaDocId = _idFarmaciaController.text;
-    int cantidad = int.tryParse(_cantidadController.text) ?? 0;
-    double precio = double.tryParse(_precioController.text) ?? 0.0;
-    DateTime ahora = DateTime.now();
-
-    // Agregar registro a la subcolección "Inventario" dentro del documento de la farmacia
-    await FirebaseFirestore.instance
+    // Buscar la farmacia utilizando el campo 'id_farmacia'
+    QuerySnapshot farmaciaQuery = await FirebaseFirestore.instance
         .collection('Farmacias')
-        .doc(farmaciaDocId)
-        .collection('Inventario')
-        .add({
-      'nombreMedicamento': _selectedMedicamento,
-      'cantidad': cantidad,
-      'precio': precio,
-      'ultimaActualizacion': ahora.toIso8601String(),
-    });
+        .where('id_farmacia', isEqualTo: _idFarmaciaController.text)
+        .get();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Inventario agregado exitosamente.")),
-    );
+    if (farmaciaQuery.docs.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("No se encontró la farmacia con el id_farmacia indicado.")),
+      );
+      setState(() {
+        _isUploadingInventario = false;
+      });
+      return;
+    }
+
+    // Obtener la referencia del primer documento que cumpla la condición
+    DocumentReference farmaciaDoc = farmaciaQuery.docs.first.reference;
+
+    // Buscar si ya existe un documento de inventario para el medicamento seleccionado
+    QuerySnapshot invQuery = await farmaciaDoc
+        .collection('Inventario')
+        .where('nombreMedicamento', isEqualTo: _selectedMedicamento)
+        .get();
+
+    int nuevaCantidad = int.tryParse(_cantidadController.text) ?? 0;
+    double nuevoPrecio = double.tryParse(_precioController.text) ?? 0.0;
+
+    if (invQuery.docs.isNotEmpty) {
+      // Si existe, actualizamos el documento (sumamos la cantidad y actualizamos el precio y la fecha)
+      DocumentReference invDoc = invQuery.docs.first.reference;
+      int cantidadExistente = invQuery.docs.first.get('cantidad') as int;
+      await invDoc.update({
+        'cantidad': cantidadExistente + nuevaCantidad,
+        'precio': nuevoPrecio,
+        'ultimaActualizacion': DateTime.now().toIso8601String(),
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Inventario actualizado exitosamente.")),
+      );
+    } else {
+      // Si no existe, creamos un nuevo documento en la subcolección "Inventario"
+      await farmaciaDoc.collection('Inventario').add({
+        'nombreMedicamento': _selectedMedicamento,
+        'cantidad': nuevaCantidad,
+        'precio': nuevoPrecio,
+        'ultimaActualizacion': DateTime.now().toIso8601String(),
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Inventario agregado exitosamente.")),
+      );
+    }
 
     // Limpiar campos del inventario
     _idFarmaciaController.clear();
-    _selectedMedicamento = null;
+    setState(() {
+      _selectedMedicamento = null;
+    });
     _cantidadController.clear();
     _precioController.clear();
 
@@ -306,11 +359,12 @@ class _UploadScreenState extends State<UploadScreen> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             Divider(),
+            // En este campo se ingresa el valor de id_farmacia (no el documento ID) que se usará para buscar la farmacia
             TextField(
               controller: _idFarmaciaController,
               decoration: InputDecoration(
-                labelText: 'ID del documento de la Farmacia',
-                hintText: 'Ingrese el documento ID de la farmacia',
+                labelText: 'id_farmacia de la Farmacia',
+                hintText: 'Ingrese el valor id_farmacia de la farmacia',
               ),
             ),
             FutureBuilder<List<String>>(
