@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'firebase_options.dart';
+import 'BD/firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +21,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Subir Datos',
       home: UploadScreen(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
@@ -36,7 +37,6 @@ class _UploadScreenState extends State<UploadScreen> {
   final TextEditingController _categoriaController = TextEditingController();
   final TextEditingController _descripcionController = TextEditingController();
   final TextEditingController _sellosController = TextEditingController();
-  final TextEditingController _farmaciasController = TextEditingController();
   final TextEditingController _imagenUrlController = TextEditingController();
 
   // Controladores para Farmacia
@@ -89,7 +89,6 @@ class _UploadScreenState extends State<UploadScreen> {
         _categoriaController.text.isEmpty ||
         _descripcionController.text.isEmpty ||
         _sellosController.text.isEmpty ||
-        _farmaciasController.text.isEmpty ||
         _imagenUrlController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Completa todos los campos del medicamento.")),
@@ -102,14 +101,12 @@ class _UploadScreenState extends State<UploadScreen> {
     });
 
     List<String> sellos = _sellosController.text.split(',').map((s) => s.trim()).toList();
-    List<String> farmacias = _farmaciasController.text.split(',').map((s) => s.trim()).toList();
 
     await FirebaseFirestore.instance.collection('Medicamento').add({
       'nombreMedicamento': _nombreMedicamentoController.text,
       'categoria': _categoriaController.text,
       'descripcion': _descripcionController.text,
       'sellosSeguridad': sellos,
-      'farmacias': farmacias,
       'imagenUrl': _imagenUrlController.text,
     });
 
@@ -122,7 +119,6 @@ class _UploadScreenState extends State<UploadScreen> {
     _categoriaController.clear();
     _descripcionController.clear();
     _sellosController.clear();
-    _farmaciasController.clear();
     _imagenUrlController.clear();
 
     setState(() {
@@ -290,12 +286,6 @@ class _UploadScreenState extends State<UploadScreen> {
               controller: _sellosController,
               decoration: InputDecoration(
                 labelText: 'Sellos de seguridad (separados por comas)',
-              ),
-            ),
-            TextField(
-              controller: _farmaciasController,
-              decoration: InputDecoration(
-                labelText: 'Farmacias (separadas por comas)',
               ),
             ),
             TextField(

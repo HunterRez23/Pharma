@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'Sesion/Sesion.dart';
 import 'package:firebase_core/firebase_core.dart' show Firebase, FirebaseOptions;
-import 'firebase_options.dart';
+import 'BD/firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
