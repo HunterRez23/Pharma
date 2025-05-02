@@ -62,19 +62,17 @@ class DetallesMedicamentoScreen extends StatelessWidget {
 
   /// Abre la app de navegación con las coordenadas lat,lng
   Future<void> _openLocation(String latLng) async {
+    // Formatear coordenadas
+    final coords = latLng.replaceAll(' ', '');
+    final geoUri = Uri.parse('geo:$coords?q=$coords');
+    final webUri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$coords');
+
     try {
-      // Formato correcto para abrir Google Maps con coordenadas
-      final Uri googleMapsUrl = Uri.parse('https://www.google.com/maps/search/?api=1&query=$latLng');
-      
-      if (await canLaunchUrl(googleMapsUrl)) {
-        await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
-      } else {
-        throw 'No se pudo abrir la ubicación';
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(_scaffoldKey.currentContext!).showSnackBar(
-        SnackBar(content: Text('Error: No se pudo abrir la ubicación')),
-      );
+      // Intent directo geo:
+      await launchUrl(geoUri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      // Si no hay handler para geo:, fallback a navegador
+      await launchUrl(webUri, mode: LaunchMode.externalApplication);
     }
   }
 

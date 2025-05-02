@@ -1,0 +1,2 @@
+C:/Users/kenne/flutter/Pharma/pharmacare/android/app/.cxx/Debug/1y4v57im/x86/CMakeFiles/edit_cache.dir
+C:/Users/kenne/flutter/Pharma/pharmacare/android/app/.cxx/Debug/1y4v57im/x86/CMakeFiles/rebuild_cache.dir
