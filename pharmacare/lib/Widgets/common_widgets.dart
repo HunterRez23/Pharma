@@ -69,10 +69,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             ),
       actions: showSearch
           ? <Widget>[ if (onFilterPressed != null)
-              IconButton(
-                icon: const Icon(Icons.filter_list, color: Colors.white),
-                onPressed: onFilterPressed,
-              ),
+            
               if (onNotificationsPressed != null)
                 IconButton(
                   icon: const Icon(Icons.notifications, color: Colors.white),

@@ -12,7 +12,28 @@
           "package_name": "com.example.pharmacare"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "67193969716-qgmjsuea4jnjbk55ptfjv2mpn7ui96s7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.pharmacare",
+            "certificate_hash": "3ff65e644b0cae5bc253032b2c499ec51282f055"
+          }
+        },
+        {
+          "client_id": "67193969716-vvg88idofrrqajeqn97neb9a3j78plu9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.pharmacare",
+            "certificate_hash": "2c7cdd7221504215fa9bac02614b6e2fb0bc1669"
+          }
+        },
+        {
+          "client_id": "67193969716-63qf5rsssc9voos02hkrmg964mur3a4k.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAPqKvFLQANZ53IMyUVX7z1m41KtA0x8lE"
@@ -20,7 +41,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "67193969716-63qf5rsssc9voos02hkrmg964mur3a4k.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "67193969716-d5t3nlbf80vbvuntrdv48strimsr8sgd.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.pharmacare"
+              }
+            }
+          ]
         }
       }
     }

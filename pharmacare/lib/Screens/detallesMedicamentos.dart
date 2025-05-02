@@ -9,54 +9,82 @@ import '../Widgets/common_widgets.dart';
 class DetallesMedicamentoScreen extends StatelessWidget {
   final Map<String, dynamic> medicamento;
 
-  const DetallesMedicamentoScreen({
+  DetallesMedicamentoScreen({
     Key? key,
     required this.medicamento,
   }) : super(key: key);
 
   /// Recupera las farmacias que tienen existencia de este medicamento
   Future<List<Map<String, dynamic>>> _fetchFarmacias() async {
-    final medName = medicamento['nombreMedicamento'] as String;
-    // Consulta en todas las subcolecciones 'Inventario'
-    final invSnap = await FirebaseFirestore.instance
-        .collectionGroup('Inventario')
-        .where('nombreMedicamento', isEqualTo: medName)
-        .get();
-
-    final lista = <Map<String, dynamic>>[];
-    for (var invDoc in invSnap.docs) {
-      final invData = invDoc.data() as Map<String, dynamic>;
-      // El padre de la subcolección 'Inventario' es el documento de la farmacia
-      final farmRef = invDoc.reference.parent.parent;
-      if (farmRef == null) continue;
-
-      final farmDoc = await farmRef.get();
-      if (!farmDoc.exists) continue;
-      final farmData = farmDoc.data() as Map<String, dynamic>;
-
-      lista.add({
-        'nombre': farmData['nombre'] ?? '',
-        'sucursal': farmData['sucursal'] ?? '',
-        'horario': farmData['Horario'] ?? '',
-        'latLng': farmData['LatLng'] ?? '',
-        'cantidad': invData['cantidad'] ?? 0,
-        'precio': invData['precio'] ?? 0,
-      });
+    final medName = medicamento['nombreMedicamento'] ?? medicamento['nombre'] ?? '';
+    if (medName.isEmpty) {
+      return [];
     }
-    return lista;
+
+    try {
+      // Primero obtenemos todas las farmacias
+      final farmaciasSnapshot = await FirebaseFirestore.instance
+          .collection('Farmacias')
+          .get();
+      
+      final lista = <Map<String, dynamic>>[];
+      
+      // Para cada farmacia, verificamos si tiene el medicamento en su inventario
+      for (var farmaciaDoc in farmaciasSnapshot.docs) {
+        final farmaciaData = farmaciaDoc.data();
+        
+        // Consultamos el inventario de esta farmacia buscando el medicamento
+        final inventarioSnapshot = await farmaciaDoc.reference
+            .collection('Inventario')
+            .where('nombreMedicamento', isEqualTo: medName)
+            .get();
+        
+        // Si hay al menos un documento, significa que esta farmacia tiene el medicamento
+        if (inventarioSnapshot.docs.isNotEmpty) {
+          final inventarioData = inventarioSnapshot.docs.first.data();
+          
+          lista.add({
+            'nombre': farmaciaData['nombre'] ?? '',
+            'sucursal': farmaciaData['sucursal'] ?? '',
+            'horario': farmaciaData['Horario'] ?? '',
+            'latLng': farmaciaData['LatLng'] ?? '',
+            'precio': inventarioData['precio'] ?? 0,
+          });
+        }
+      }
+      
+      return lista;
+    } catch (e) {
+      print('Error al obtener farmacias: $e');
+      return [];
+    }
   }
 
   /// Abre la app de navegación con las coordenadas lat,lng
   Future<void> _openLocation(String latLng) async {
-    final uri = Uri.parse('google.navigation:q=$latLng');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    try {
+      // Formato correcto para abrir Google Maps con coordenadas
+      final Uri googleMapsUrl = Uri.parse('https://www.google.com/maps/search/?api=1&query=$latLng');
+      
+      if (await canLaunchUrl(googleMapsUrl)) {
+        await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
+      } else {
+        throw 'No se pudo abrir la ubicación';
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(_scaffoldKey.currentContext!).showSnackBar(
+        SnackBar(content: Text('Error: No se pudo abrir la ubicación')),
+      );
     }
   }
+
+  // Para poder mostrar SnackBar en caso de error en openLocation
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       appBar: CustomAppBar(
         showSearch: false,
         title: 'Detalles',
@@ -73,7 +101,7 @@ class DetallesMedicamentoScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  medicamento['nombreMedicamento'] ?? '',
+                  medicamento['nombreMedicamento'] ?? medicamento['nombre'] ?? '',
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
@@ -128,19 +156,47 @@ class DetallesMedicamentoScreen extends StatelessWidget {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
+                
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                
                 final farms = snapshot.data ?? [];
                 if (farms.isEmpty) {
                   return const Center(child: Text('No hay farmacias con existencia'));
                 }
+                
                 return ListView.builder(
                   itemCount: farms.length,
                   itemBuilder: (context, index) {
                     final f = farms[index];
-                    return ListTile(
-                      leading: const Icon(Icons.location_on, color: Colors.red),
-                      title: Text('${f['nombre']} (${f['sucursal']})'),
-                      subtitle: Text('Cantidad: ${f['cantidad']} • Precio: \$${f['precio']}'),
-                      onTap: () => _openLocation(f['latLng'] as String),
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: ListTile(
+                          leading: const Icon(Icons.location_on, color: Colors.red),
+                          title: Text('${f['nombre']} (${f['sucursal']})'),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Horario: ${f['horario']}'),
+                              Text('Precio: \$${f['precio']}'),
+                              const SizedBox(height: 4),
+                              TextButton(
+                                onPressed: () => _openLocation(f['latLng']),
+                                child: const Text('Abrir ubicación'),
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  minimumSize: const Size(50, 20),
+                                  alignment: Alignment.centerLeft,
+                                ),
+                              ),
+                            ],
+                          ),
+                          isThreeLine: true,
+                        ),
+                      ),
                     );
                   },
                 );
