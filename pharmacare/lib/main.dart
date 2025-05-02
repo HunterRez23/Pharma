@@ -1,32 +1,71 @@
+// lib/main.dart
+
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import 'Sesion/Sesion.dart';
-import 'package:firebase_core/firebase_core.dart' show Firebase, FirebaseOptions;
-import 'BD/firebase_options.dart';
+import 'Screens/PantallaPrincipal.dart';
+import 'BD/firebase_options.dart';  // tu google-services generado
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform, 
+      options: DefaultFirebaseOptions.currentPlatform,
     );
-    runApp(MyApp());
+    runApp(const MyApp());
   } catch (e) {
-    print('Error al inicializar Firebase: $e'); 
+    print('Error al inicializar Firebase: $e');
   }
 }
 
-
 class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'PharmaCare',
       debugShowCheckedModeBanner: false,
-      home: WelcomeScreen(),
+      home: const AuthGate(),
     );
   }
 }
 
+/// Este widget decide qué pantalla mostrar según si el usuario está logueado o no.
+class AuthGate extends StatelessWidget {
+  const AuthGate({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      // Escucha los cambios en el estado de autenticación
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        // Mientras se conecta a Firebase...
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        // Si hay un usuario ya autenticado, vamos directo a PantallaPrincipal
+        if (snapshot.hasData && snapshot.data != null) {
+          return const PantallaPrincipal();
+        }
+
+        // Si NO hay usuario, arrancamos con el Welcome/Login
+        return const WelcomeScreen();
+      },
+    );
+  }
+}
+
+/// Tu pantalla de bienvenida, que redirige al login
 class WelcomeScreen extends StatelessWidget {
+  const WelcomeScreen({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -35,49 +74,46 @@ class WelcomeScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Transform.translate(
-              offset: const Offset(0.0, -100.0),
+              offset: const Offset(0, -100),
               child: Image.asset(
                 'image/Pharma.png',
-                width: 200.0,
-                height: 200.0,
+                width: 200,
+                height: 200,
               ),
             ),
-            const SizedBox(height: 50.0),
+            const SizedBox(height: 50),
             const Text(
               '¡Bienvenido!',
-              style: TextStyle(
-                fontSize: 24.0,
-                fontWeight: FontWeight.bold,
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                '¡Gracias por unirte! Accede o crea tu cuenta y comienza a ahorrar.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
             ),
-            const SizedBox(height: 20.0),
-            const Text(
-              '¡Gracias por unirte! ¡Acceda o cree su cuenta y comience a ahorrar!',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16.0,
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 30.0),
+            const SizedBox(height: 30),
             SizedBox(
-              width: 220.0,
-              height: 55.0,
+              width: 220,
+              height: 55,
               child: ElevatedButton(
                 onPressed: () {
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (context) => SesionScreen()),
+                    MaterialPageRoute(builder: (_) => SesionScreen()),
                   );
                 },
                 child: const Text(
                   'Continuar',
-                  style: TextStyle(fontSize: 18.0, color: Colors.white),
+                  style: TextStyle(fontSize: 18, color: Colors.white),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30.0),
+                    borderRadius: BorderRadius.circular(30),
                   ),
                 ),
               ),
@@ -88,4 +124,3 @@ class WelcomeScreen extends StatelessWidget {
     );
   }
 }
-

@@ -8,6 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../Widgets/common_widgets.dart';           // Ruta a common_widgets
 import 'detallesMedicamentos.dart';                // Pantalla de detalles
+import '../Screens/Medicos.dart';            // Pantalla de médicos
 
 class PantallaPrincipal extends StatefulWidget {
   const PantallaPrincipal({Key? key}) : super(key: key);
@@ -51,7 +52,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         leadingIcon: Icons.menu,
         onLeadingPressed: () => _scaffoldKey.currentState?.openDrawer(),
         onSearchSubmitted: (q) => ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Buscar: \$q'))),
+            .showSnackBar(const SnackBar(content: Text('Buscar: \$q'))),
         onFilterPressed: () => ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('Filtro aún no implementado'))),
         onNotificationsPressed: () => ScaffoldMessenger.of(context)
@@ -105,7 +106,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
             padding: const EdgeInsets.symmetric(vertical: 8.0),
             child: Column(
               children: [
-                ImageCarousel(
+                const ImageCarousel(
                   images: [
                     'image/Similares.jpg',
                     'image/FarmaAhorro.jpg',
@@ -134,7 +135,19 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       ),
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _selectedIndex,
-        onTap: (i) => setState(() => _selectedIndex = i),
+        onTap: (i) {
+          if (i == 1) {
+            // Botón del medio: navegar a la pantalla de médicos
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const Medicos()),
+            );
+          }
+          // Opcionalmente, actualizas el índice seleccionado
+          setState(() {
+            _selectedIndex = i;
+          });
+        },
       ),
     );
   }
