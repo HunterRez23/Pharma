@@ -1,7 +1,6 @@
-// lib/Screens/Medicos.dart
-
 import 'package:flutter/material.dart';
 import '../Widgets/common_widgets.dart'; // Para CustomAppBar, CustomBottomNavBar
+import './detallesMedico.dart'; // Importamos la nueva pantalla
 
 class Doctor {
   final String name;
@@ -130,7 +129,6 @@ class _MedicosState extends State<Medicos> {
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _selectedIndex,
         onTap: (i) {
-          // Puedes ampliar lógica para farmacias o chat si lo deseas
           if (i != 1) Navigator.of(context).popUntil((r) => r.isFirst);
           setState(() => _selectedIndex = i);
         },
@@ -145,28 +143,35 @@ class DoctorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: _MedicosState._lightGrey,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(radius: 30, backgroundImage: NetworkImage(doctor.imageUrl)),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(doctor.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text(doctor.specialty, style: const TextStyle(fontSize: 14)),
-              ],
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const DetallesMedico()),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: _MedicosState._lightGrey,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(radius: 30, backgroundImage: NetworkImage(doctor.imageUrl)),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(doctor.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text(doctor.specialty, style: const TextStyle(fontSize: 14)),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
