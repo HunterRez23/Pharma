@@ -1,5 +1,3 @@
-// lib/Screens/PrincipalMedicos.dart
-
 import 'package:flutter/material.dart';
 import '../widgets/common_widgets.dart';
 
