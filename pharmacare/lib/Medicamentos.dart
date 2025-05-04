@@ -1,3 +1,4 @@
+// ✅ IMPORTACIONES
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -33,74 +34,118 @@ class UploadScreen extends StatefulWidget {
 
 class _UploadScreenState extends State<UploadScreen> {
   // Controladores para Medicamento
-  final TextEditingController _nombreMedicamentoController = TextEditingController();
-  final TextEditingController _categoriaController = TextEditingController();
-  final TextEditingController _descripcionController = TextEditingController();
-  final TextEditingController _sellosController = TextEditingController();
-  final TextEditingController _imagenUrlController = TextEditingController();
+  final _nombreMedicamentoController = TextEditingController();
+  final _categoriaController = TextEditingController();
+  final _descripcionController = TextEditingController();
+  final _sellosController = TextEditingController();
+  final _imagenUrlController = TextEditingController();
 
   // Controladores para Farmacia
-  final TextEditingController _idFarmaciaFieldController = TextEditingController(); // Campo id_farmacia
-  final TextEditingController _nombreFarmaciaController = TextEditingController();
-  final TextEditingController _latLngController = TextEditingController();
-  final TextEditingController _horarioController = TextEditingController();
-  final TextEditingController _imagenUrlFarmaciaController = TextEditingController();
-  final TextEditingController _sucursalController = TextEditingController();
+  final _idFarmaciaFieldController = TextEditingController();
+  final _nombreFarmaciaController = TextEditingController();
+  final _latLngController = TextEditingController();
+  final _imagenUrlFarmaciaController = TextEditingController();
+  final _sucursalController = TextEditingController();
 
-  // Controladores para Inventario (subcolección dentro de Farmacias)
-  // Ahora se usará este campo para ingresar el valor del campo id_farmacia de la farmacia (no el documento ID)
-  final TextEditingController _idFarmaciaController = TextEditingController();
-  final TextEditingController _cantidadController = TextEditingController();
-  final TextEditingController _precioController = TextEditingController();
+  // Horarios dinámicos
+  List<Map<String, String>> _horarios = [{'dia': '', 'inicio': '', 'fin': ''}];
+  void _agregarHorario() {
+    setState(() {
+      _horarios.add({'dia': '', 'inicio': '', 'fin': ''});
+    });
+  }
+
+  void _eliminarHorario(int index) {
+    setState(() {
+      _horarios.removeAt(index);
+    });
+  }
+
+  List<Map<String, String>> _obtenerHorarios() => _horarios;
+
+  Widget _buildHorarioInputs() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text("Horarios (día, hora inicio, hora fin):", style: TextStyle(fontWeight: FontWeight.bold)),
+        ..._horarios.asMap().entries.map((entry) {
+          final index = entry.key;
+          return Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  decoration: InputDecoration(labelText: 'Día'),
+                  onChanged: (value) => _horarios[index]['dia'] = value,
+                ),
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  decoration: InputDecoration(labelText: 'Inicio'),
+                  onChanged: (value) => _horarios[index]['inicio'] = value,
+                ),
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  decoration: InputDecoration(labelText: 'Fin'),
+                  onChanged: (value) => _horarios[index]['fin'] = value,
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.delete, color: Colors.red),
+                onPressed: () => _eliminarHorario(index),
+              ),
+            ],
+          );
+        }),
+        TextButton.icon(
+          onPressed: _agregarHorario,
+          icon: Icon(Icons.add),
+          label: Text("Agregar horario"),
+        ),
+      ],
+    );
+  }
+
+  // Controladores para Inventario
+  final _idFarmaciaController = TextEditingController();
+  final _cantidadController = TextEditingController();
+  final _precioController = TextEditingController();
+  String? _selectedMedicamento;
+
+  // Controladores para Doctor
+  final _nombreDoctorController = TextEditingController();
+  final _licenciaController = TextEditingController();
+  final _especialidadesController = TextEditingController();
+  final _emailDoctorController = TextEditingController();
+  final _telefonoDoctorController = TextEditingController();
+  final _descripcionDoctorController = TextEditingController();
+  final _honorarioController = TextEditingController();
 
   bool _isUploadingMedicamento = false;
   bool _isUploadingFarmacia = false;
   bool _isUploadingInventario = false;
+  bool _isUploadingDoctor = false;
 
-  // Variable para el medicamento seleccionado en el combobox de Inventario
-  String? _selectedMedicamento;
-
-  // Función para obtener la lista de medicamentos usando el campo 'nombreMedicamento'
   Future<List<String>> _getMedicamentos() async {
     try {
-      QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('Medicamento').get();
-      print("Docs encontrados: ${snapshot.docs.length}");
-      List<String> medicamentos = [];
-      for (var doc in snapshot.docs) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        if (data.containsKey('nombreMedicamento')) {
-          String med = data['nombreMedicamento'];
-          print("✔ Medicamento encontrado: $med");
-          medicamentos.add(med);
-        } else {
-          print("⚠ Documento sin campo 'nombreMedicamento': ${doc.id}");
-        }
-      }
-      return medicamentos;
-    } catch (e) {
-      print("Error en _getMedicamentos(): $e");
+      final snapshot = await FirebaseFirestore.instance.collection('Medicamento').get();
+      return snapshot.docs.map((doc) => doc['nombreMedicamento'].toString()).toList();
+    } catch (_) {
       return [];
     }
   }
 
-  // Función para subir medicamento a Firestore
   Future<void> _submitMedicamento() async {
     if (_nombreMedicamentoController.text.isEmpty ||
         _categoriaController.text.isEmpty ||
         _descripcionController.text.isEmpty ||
         _sellosController.text.isEmpty ||
-        _imagenUrlController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Completa todos los campos del medicamento.")),
-      );
-      return;
-    }
+        _imagenUrlController.text.isEmpty) return;
 
-    setState(() {
-      _isUploadingMedicamento = true;
-    });
-
-    List<String> sellos = _sellosController.text.split(',').map((s) => s.trim()).toList();
+    setState(() => _isUploadingMedicamento = true);
+    final sellos = _sellosController.text.split(',').map((e) => e.trim()).toList();
 
     await FirebaseFirestore.instance.collection('Medicamento').add({
       'nombreMedicamento': _nombreMedicamentoController.text,
@@ -110,297 +155,163 @@ class _UploadScreenState extends State<UploadScreen> {
       'imagenUrl': _imagenUrlController.text,
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Medicamento subido exitosamente.")),
-    );
-
-    // Limpiar campos
     _nombreMedicamentoController.clear();
     _categoriaController.clear();
     _descripcionController.clear();
     _sellosController.clear();
     _imagenUrlController.clear();
 
-    setState(() {
-      _isUploadingMedicamento = false;
-    });
+    setState(() => _isUploadingMedicamento = false);
   }
 
-  // Función para subir farmacia a Firestore
   Future<void> _submitFarmacia() async {
     if (_idFarmaciaFieldController.text.isEmpty ||
         _nombreFarmaciaController.text.isEmpty ||
         _latLngController.text.isEmpty ||
-        _horarioController.text.isEmpty ||
         _imagenUrlFarmaciaController.text.isEmpty ||
-        _sucursalController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Completa todos los campos de la farmacia.")),
-      );
-      return;
-    }
+        _sucursalController.text.isEmpty) return;
 
-    setState(() {
-      _isUploadingFarmacia = true;
-    });
+    setState(() => _isUploadingFarmacia = true);
 
     await FirebaseFirestore.instance.collection('Farmacias').add({
       'id_farmacia': _idFarmaciaFieldController.text,
       'nombre': _nombreFarmaciaController.text,
       'LatLng': _latLngController.text,
-      'Horario': _horarioController.text,
       'imagenUrl': _imagenUrlFarmaciaController.text,
       'sucursal': _sucursalController.text,
+      'horarios': _obtenerHorarios(),
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Farmacia agregada exitosamente.")),
-    );
-
-    // Limpiar campos
     _idFarmaciaFieldController.clear();
     _nombreFarmaciaController.clear();
     _latLngController.clear();
-    _horarioController.clear();
     _imagenUrlFarmaciaController.clear();
     _sucursalController.clear();
+    _horarios = [{'dia': '', 'inicio': '', 'fin': ''}];
 
-    setState(() {
-      _isUploadingFarmacia = false;
-    });
+    setState(() => _isUploadingFarmacia = false);
   }
 
-  // Función para agregar o actualizar un registro de inventario en la subcolección "Inventario"
-  // de una farmacia, buscando la farmacia por el campo 'id_farmacia'
   Future<void> _submitInventario() async {
-    if (_idFarmaciaController.text.isEmpty ||
-        _selectedMedicamento == null ||
-        _cantidadController.text.isEmpty ||
-        _precioController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Completa todos los campos del inventario.")),
-      );
-      return;
-    }
+    if (_idFarmaciaController.text.isEmpty || _selectedMedicamento == null) return;
 
-    setState(() {
-      _isUploadingInventario = true;
-    });
-
-    // Buscar la farmacia utilizando el campo 'id_farmacia'
-    QuerySnapshot farmaciaQuery = await FirebaseFirestore.instance
+    final query = await FirebaseFirestore.instance
         .collection('Farmacias')
         .where('id_farmacia', isEqualTo: _idFarmaciaController.text)
         .get();
 
-    if (farmaciaQuery.docs.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("No se encontró la farmacia con el id_farmacia indicado.")),
-      );
-      setState(() {
-        _isUploadingInventario = false;
-      });
-      return;
-    }
+    if (query.docs.isEmpty) return;
 
-    // Obtener la referencia del primer documento que cumpla la condición
-    DocumentReference farmaciaDoc = farmaciaQuery.docs.first.reference;
+    final docRef = query.docs.first.reference;
+    final cantidad = int.tryParse(_cantidadController.text) ?? 0;
+    final precio = double.tryParse(_precioController.text) ?? 0.0;
 
-    // Buscar si ya existe un documento de inventario para el medicamento seleccionado
-    QuerySnapshot invQuery = await farmaciaDoc
-        .collection('Inventario')
-        .where('nombreMedicamento', isEqualTo: _selectedMedicamento)
-        .get();
-
-    int nuevaCantidad = int.tryParse(_cantidadController.text) ?? 0;
-    double nuevoPrecio = double.tryParse(_precioController.text) ?? 0.0;
-
-    if (invQuery.docs.isNotEmpty) {
-      // Si existe, actualizamos el documento (sumamos la cantidad y actualizamos el precio y la fecha)
-      DocumentReference invDoc = invQuery.docs.first.reference;
-      int cantidadExistente = invQuery.docs.first.get('cantidad') as int;
-      await invDoc.update({
-        'cantidad': cantidadExistente + nuevaCantidad,
-        'precio': nuevoPrecio,
-        'ultimaActualizacion': DateTime.now().toIso8601String(),
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Inventario actualizado exitosamente.")),
-      );
-    } else {
-      // Si no existe, creamos un nuevo documento en la subcolección "Inventario"
-      await farmaciaDoc.collection('Inventario').add({
-        'nombreMedicamento': _selectedMedicamento,
-        'cantidad': nuevaCantidad,
-        'precio': nuevoPrecio,
-        'ultimaActualizacion': DateTime.now().toIso8601String(),
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Inventario agregado exitosamente.")),
-      );
-    }
-
-    // Limpiar campos del inventario
-    _idFarmaciaController.clear();
-    setState(() {
-      _selectedMedicamento = null;
+    await docRef.collection('Inventario').add({
+      'nombreMedicamento': _selectedMedicamento,
+      'cantidad': cantidad,
+      'precio': precio,
+      'ultimaActualizacion': DateTime.now().toIso8601String(),
     });
+
+    _idFarmaciaController.clear();
     _cantidadController.clear();
     _precioController.clear();
+    _selectedMedicamento = null;
+  }
 
-    setState(() {
-      _isUploadingInventario = false;
+  Future<void> _submitDoctor() async {
+    if (_nombreDoctorController.text.isEmpty ||
+        _licenciaController.text.isEmpty ||
+        _especialidadesController.text.isEmpty ||
+        _emailDoctorController.text.isEmpty ||
+        _telefonoDoctorController.text.isEmpty ||
+        _descripcionDoctorController.text.isEmpty ||
+        _honorarioController.text.isEmpty) return;
+
+    setState(() => _isUploadingDoctor = true);
+    final especialidades = _especialidadesController.text.split(',').map((e) => e.trim()).toList();
+
+    await FirebaseFirestore.instance.collection('doctors').add({
+      'fullName': _nombreDoctorController.text,
+      'licenseNumber': _licenciaController.text,
+      'specialties': especialidades,
+      'contact': {
+        'email': _emailDoctorController.text,
+        'phone': _telefonoDoctorController.text,
+      },
+      'description': _descripcionDoctorController.text,
+      'prices': {'consultationFee': double.tryParse(_honorarioController.text) ?? 0.0},
+      'rating': {'average': 0.0, 'totalVotes': 0},
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
     });
+
+    _nombreDoctorController.clear();
+    _licenciaController.clear();
+    _especialidadesController.clear();
+    _emailDoctorController.clear();
+    _telefonoDoctorController.clear();
+    _descripcionDoctorController.clear();
+    _honorarioController.clear();
+
+    setState(() => _isUploadingDoctor = false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Agregar Datos"),
-      ),
+      appBar: AppBar(title: Text("Agregar Datos")),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Sección para Medicamento
-            Text(
-              "Agregar Medicamento",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            Divider(),
-            TextField(
-              controller: _nombreMedicamentoController,
-              decoration: InputDecoration(labelText: 'Nombre del Medicamento'),
-            ),
-            TextField(
-              controller: _categoriaController,
-              decoration: InputDecoration(labelText: 'Categoría'),
-            ),
-            TextField(
-              controller: _descripcionController,
-              decoration: InputDecoration(labelText: 'Descripción'),
-            ),
-            TextField(
-              controller: _sellosController,
-              decoration: InputDecoration(
-                labelText: 'Sellos de seguridad (separados por comas)',
-              ),
-            ),
-            TextField(
-              controller: _imagenUrlController,
-              decoration: InputDecoration(
-                labelText: 'URL de la imagen del medicamento',
-              ),
-            ),
-            SizedBox(height: 16),
-            _isUploadingMedicamento
-                ? Center(child: CircularProgressIndicator())
-                : ElevatedButton(
-                    onPressed: _submitMedicamento,
-                    child: Text("Subir Medicamento"),
-                  ),
+            Text("Agregar Medicamento", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            TextField(controller: _nombreMedicamentoController, decoration: InputDecoration(labelText: 'Nombre')),
+            TextField(controller: _categoriaController, decoration: InputDecoration(labelText: 'Categoría')),
+            TextField(controller: _descripcionController, decoration: InputDecoration(labelText: 'Descripción')),
+            TextField(controller: _sellosController, decoration: InputDecoration(labelText: 'Sellos (separados por comas)')),
+            TextField(controller: _imagenUrlController, decoration: InputDecoration(labelText: 'Imagen URL')),
+            _isUploadingMedicamento ? CircularProgressIndicator() : ElevatedButton(onPressed: _submitMedicamento, child: Text("Subir Medicamento")),
+
             SizedBox(height: 32),
-            // Sección para Farmacia
-            Text(
-              "Agregar Farmacia",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            Divider(),
-            TextField(
-              controller: _idFarmaciaFieldController,
-              decoration: InputDecoration(
-                labelText: 'ID de la Farmacia',
-                hintText: 'Ingrese el ID de la farmacia',
-              ),
-            ),
-            TextField(
-              controller: _nombreFarmaciaController,
-              decoration: InputDecoration(labelText: 'Nombre de la farmacia'),
-            ),
-            TextField(
-              controller: _latLngController,
-              decoration: InputDecoration(labelText: 'LatLng (ej. 31.3167, -113.5333)'),
-            ),
-            TextField(
-              controller: _horarioController,
-              decoration: InputDecoration(labelText: 'Horario (ej. 7:00am-9:00pm)'),
-            ),
-            TextField(
-              controller: _imagenUrlFarmaciaController,
-              decoration: InputDecoration(labelText: 'URL de la imagen de la farmacia'),
-            ),
-            TextField(
-              controller: _sucursalController,
-              decoration: InputDecoration(labelText: 'Sucursal'),
-            ),
-            SizedBox(height: 16),
-            _isUploadingFarmacia
-                ? Center(child: CircularProgressIndicator())
-                : ElevatedButton(
-                    onPressed: _submitFarmacia,
-                    child: Text("Agregar Farmacia"),
-                  ),
+            Text("Agregar Farmacia", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            TextField(controller: _idFarmaciaFieldController, decoration: InputDecoration(labelText: 'ID Farmacia')),
+            TextField(controller: _nombreFarmaciaController, decoration: InputDecoration(labelText: 'Nombre')),
+            TextField(controller: _latLngController, decoration: InputDecoration(labelText: 'LatLng')),
+            TextField(controller: _imagenUrlFarmaciaController, decoration: InputDecoration(labelText: 'Imagen URL')),
+            TextField(controller: _sucursalController, decoration: InputDecoration(labelText: 'Sucursal')),
+            _buildHorarioInputs(),
+            _isUploadingFarmacia ? CircularProgressIndicator() : ElevatedButton(onPressed: _submitFarmacia, child: Text("Agregar Farmacia")),
+
             SizedBox(height: 32),
-            // Sección para Inventario
-            Text(
-              "Agregar Inventario a una Farmacia",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            Divider(),
-            // En este campo se ingresa el valor de id_farmacia (no el documento ID) que se usará para buscar la farmacia
-            TextField(
-              controller: _idFarmaciaController,
-              decoration: InputDecoration(
-                labelText: 'id_farmacia de la Farmacia',
-                hintText: 'Ingrese el valor id_farmacia de la farmacia',
-              ),
-            ),
+            Text("Agregar Inventario", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            TextField(controller: _idFarmaciaController, decoration: InputDecoration(labelText: 'id_farmacia')),
             FutureBuilder<List<String>>(
               future: _getMedicamentos(),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
-                }
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return Text("No hay medicamentos disponibles");
-                }
-                List<String> medicamentos = snapshot.data!;
+                if (!snapshot.hasData) return CircularProgressIndicator();
                 return DropdownButtonFormField<String>(
-                  decoration: InputDecoration(labelText: 'Nombre del Medicamento'),
                   value: _selectedMedicamento,
-                  items: medicamentos
-                      .map((med) => DropdownMenuItem<String>(
-                            child: Text(med),
-                            value: med,
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedMedicamento = value;
-                    });
-                  },
+                  items: snapshot.data!.map((med) => DropdownMenuItem(value: med, child: Text(med))).toList(),
+                  onChanged: (val) => setState(() => _selectedMedicamento = val),
+                  decoration: InputDecoration(labelText: 'Medicamento'),
                 );
               },
             ),
-            TextField(
-              controller: _cantidadController,
-              decoration: InputDecoration(labelText: 'Cantidad'),
-              keyboardType: TextInputType.number,
-            ),
-            TextField(
-              controller: _precioController,
-              decoration: InputDecoration(labelText: 'Precio'),
-              keyboardType: TextInputType.number,
-            ),
-            SizedBox(height: 16),
-            _isUploadingInventario
-                ? Center(child: CircularProgressIndicator())
-                : ElevatedButton(
-                    onPressed: _submitInventario,
-                    child: Text("Agregar Inventario"),
-                  ),
+            TextField(controller: _cantidadController, decoration: InputDecoration(labelText: 'Cantidad'), keyboardType: TextInputType.number),
+            TextField(controller: _precioController, decoration: InputDecoration(labelText: 'Precio'), keyboardType: TextInputType.number),
+            _isUploadingInventario ? CircularProgressIndicator() : ElevatedButton(onPressed: _submitInventario, child: Text("Agregar Inventario")),
+
+            SizedBox(height: 32),
+            Text("Agregar Doctor", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            TextField(controller: _nombreDoctorController, decoration: InputDecoration(labelText: 'Nombre completo')),
+            TextField(controller: _licenciaController, decoration: InputDecoration(labelText: 'Licencia')),
+            TextField(controller: _especialidadesController, decoration: InputDecoration(labelText: 'Especialidades (separadas por comas)')),
+            TextField(controller: _emailDoctorController, decoration: InputDecoration(labelText: 'Email')),
+            TextField(controller: _telefonoDoctorController, decoration: InputDecoration(labelText: 'Teléfono')),
+            TextField(controller: _descripcionDoctorController, decoration: InputDecoration(labelText: 'Descripción')),
+            TextField(controller: _honorarioController, decoration: InputDecoration(labelText: 'Honorario'), keyboardType: TextInputType.number),
+            _isUploadingDoctor ? CircularProgressIndicator() : ElevatedButton(onPressed: _submitDoctor, child: Text("Subir Doctor")),
           ],
         ),
       ),
