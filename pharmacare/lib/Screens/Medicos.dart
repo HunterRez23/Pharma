@@ -1,29 +1,9 @@
-// lib/Screens/Medicos.dart
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:diacritic/diacritic.dart';
 import '../Widgets/common_widgets.dart'; // Para CustomAppBar, CustomBottomNavBar
-
-class Doctor {
-  final String name;
-  final String specialty;
-  final String imageUrl;
-
-  const Doctor({
-    required this.name,
-    required this.specialty,
-    required this.imageUrl,
-  });
-
-  factory Doctor.fromMap(Map<String, dynamic> data) {
-    return Doctor(
-      name: data['fullName'] ?? 'Sin nombre',
-      specialty: (data['specialties'] as List<dynamic>).isNotEmpty ? data['specialties'][0] : 'General',
-      imageUrl: data['imageUrl'] ?? 'https://via.placeholder.com/150',
-    );
-  }
-}
+import '../Modelos/doctor.dart';
+import 'detallesMedico.dart';
 
 class Medicos extends StatefulWidget {
   const Medicos({Key? key}) : super(key: key);
@@ -40,13 +20,13 @@ class _MedicosState extends State<Medicos> {
   String? _filtroEspecialidad;
 
   final List<Map<String, dynamic>> specialties = const [
-    { 'name': 'General',      'icon': Icons.medical_services },
-    { 'name': 'Pediatra',     'icon': Icons.child_care },
-    { 'name': 'Dentista',     'icon': Icons.health_and_safety },
-    { 'name': 'Cardiólogo',   'icon': Icons.favorite },
-    { 'name': 'Psicólogo',    'icon': Icons.psychology },
-    { 'name': 'Fisioterapeuta','icon': Icons.fitness_center },
-    { 'name': 'Nutriólogo',   'icon': Icons.fastfood },
+    {'name': 'General', 'icon': Icons.medical_services},
+    {'name': 'Pediatra', 'icon': Icons.child_care},
+    {'name': 'Dentista', 'icon': Icons.health_and_safety},
+    {'name': 'Cardiólogo', 'icon': Icons.favorite},
+    {'name': 'Psicólogo', 'icon': Icons.psychology},
+    {'name': 'Fisioterapeuta', 'icon': Icons.fitness_center},
+    {'name': 'Nutriólogo', 'icon': Icons.fastfood},
   ];
 
   List<Doctor> _todosLosDoctores = [];
@@ -82,7 +62,7 @@ class _MedicosState extends State<Medicos> {
         leadingIcon: Icons.arrow_back,
         onLeadingPressed: () => Navigator.of(context).pop(),
         onSearchSubmitted: (q) => ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Buscar médico: \$q'))),
+            .showSnackBar(SnackBar(content: Text('Buscar médico: $q'))),
         onFilterPressed: () => ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('Filtro no implementado'))),
         onNotificationsPressed: () => ScaffoldMessenger.of(context)
@@ -92,7 +72,6 @@ class _MedicosState extends State<Medicos> {
         child: ListView(
           padding: const EdgeInsets.symmetric(vertical: 16),
           children: [
-            // Slider de especialidades con filtro
             SizedBox(
               height: 100,
               child: ListView.separated(
@@ -171,28 +150,35 @@ class DoctorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: _MedicosState._lightGrey,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(radius: 30, backgroundImage: NetworkImage(doctor.imageUrl)),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(doctor.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text(doctor.specialty, style: const TextStyle(fontSize: 14)),
-              ],
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => DetallesMedico(doctor: doctor),
+        ));
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: _MedicosState._lightGrey,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(radius: 30, backgroundImage: NetworkImage(doctor.imageUrl)),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(doctor.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text(doctor.specialty, style: const TextStyle(fontSize: 14)),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
