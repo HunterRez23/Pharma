@@ -2,82 +2,113 @@
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
-
 import '../Widgets/common_widgets.dart';
 
-class DetallesMedicamentoScreen extends StatelessWidget {
+class DetallesMedicamentoScreen extends StatefulWidget {
   final Map<String, dynamic> medicamento;
+  const DetallesMedicamentoScreen({Key? key, required this.medicamento}) : super(key: key);
 
-  DetallesMedicamentoScreen({
-    Key? key,
-    required this.medicamento,
-  }) : super(key: key);
+  @override
+  _DetallesMedicamentoScreenState createState() => _DetallesMedicamentoScreenState();
+}
 
-  /// Recupera las farmacias que tienen existencia de este medicamento
-  Future<List<Map<String, dynamic>>> _fetchFarmacias() async {
-    final medName = medicamento['nombreMedicamento'] ?? medicamento['nombre'] ?? '';
-    if (medName.isEmpty) {
-      return [];
-    }
+class _DetallesMedicamentoScreenState extends State<DetallesMedicamentoScreen> {
+  bool _isFavorite = false;
+  late String _uid;
+  late String _medId;
 
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  @override
+  void initState() {
+    super.initState();
+    final user = FirebaseAuth.instance.currentUser;
+    _uid = user?.uid ?? '';
+    _medId = widget.medicamento['id'] ?? widget.medicamento['nombreMedicamento'] ?? '';
+    _loadFavorite();
+  }
+
+  Future<void> _loadFavorite() async {
+    if (_uid.isEmpty) return;
+    final doc = await FirebaseFirestore.instance
+        .collection('usuarios')
+        .doc(_uid)
+        .collection('favoritos')
+        .doc(_medId)
+        .get();
+    setState(() => _isFavorite = doc.exists);
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (_uid.isEmpty) return;
+    final favRef = FirebaseFirestore.instance
+        .collection('usuarios')
+        .doc(_uid)
+        .collection('favoritos')
+        .doc(_medId);
     try {
-      // Primero obtenemos todas las farmacias
-      final farmaciasSnapshot = await FirebaseFirestore.instance
-          .collection('Farmacias')
-          .get();
-      
-      final lista = <Map<String, dynamic>>[];
-      
-      // Para cada farmacia, verificamos si tiene el medicamento en su inventario
-      for (var farmaciaDoc in farmaciasSnapshot.docs) {
+      if (_isFavorite) {
+        await favRef.delete();
+      } else {
+        await favRef.set({
+          'medicamentoId': _medId,
+          'nombre': widget.medicamento['nombreMedicamento'] ?? widget.medicamento['nombre'] ?? '',
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      }
+      setState(() => _isFavorite = !_isFavorite);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_isFavorite ? 'Agregado a favoritos' : 'Eliminado de favoritos')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: \$e')),
+      );
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchFarmacias() async {
+    final medName = widget.medicamento['nombreMedicamento'] ?? widget.medicamento['nombre'] ?? '';
+    if (medName.isEmpty) return [];
+    try {
+      final farmSnap = await FirebaseFirestore.instance.collection('Farmacias').get();
+      final List<Map<String, dynamic>> lista = [];
+      for (var farmaciaDoc in farmSnap.docs) {
         final farmaciaData = farmaciaDoc.data();
-        
-        // Consultamos el inventario de esta farmacia buscando el medicamento
-        final inventarioSnapshot = await farmaciaDoc.reference
+        final invSnap = await farmaciaDoc.reference
             .collection('Inventario')
             .where('nombreMedicamento', isEqualTo: medName)
             .get();
-        
-        // Si hay al menos un documento, significa que esta farmacia tiene el medicamento
-        if (inventarioSnapshot.docs.isNotEmpty) {
-          final inventarioData = inventarioSnapshot.docs.first.data();
-          
+        if (invSnap.docs.isNotEmpty) {
+          final invData = invSnap.docs.first.data();
           lista.add({
             'nombre': farmaciaData['nombre'] ?? '',
             'sucursal': farmaciaData['sucursal'] ?? '',
             'horario': farmaciaData['Horario'] ?? '',
             'latLng': farmaciaData['LatLng'] ?? '',
-            'precio': inventarioData['precio'] ?? 0,
+            'precio': invData['precio'] ?? 0,
           });
         }
       }
-      
       return lista;
     } catch (e) {
-      print('Error al obtener farmacias: $e');
+      print('Error al obtener farmacias: \$e');
       return [];
     }
   }
 
-  /// Abre la app de navegación con las coordenadas lat,lng
   Future<void> _openLocation(String latLng) async {
-    // Formatear coordenadas
     final coords = latLng.replaceAll(' ', '');
-    final geoUri = Uri.parse('geo:$coords?q=$coords');
-    final webUri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$coords');
-
+    final geoUri = Uri.parse('geo:\$coords?q=\$coords');
+    final webUri = Uri.parse('https://www.google.com/maps/search/?api=1&query=\$coords');
     try {
-      // Intent directo geo:
       await launchUrl(geoUri, mode: LaunchMode.externalApplication);
     } catch (_) {
-      // Si no hay handler para geo:, fallback a navegador
       await launchUrl(webUri, mode: LaunchMode.externalApplication);
     }
   }
-
-  // Para poder mostrar SnackBar en caso de error en openLocation
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   Widget build(BuildContext context) {
@@ -88,29 +119,34 @@ class DetallesMedicamentoScreen extends StatelessWidget {
         title: 'Detalles',
         leadingIcon: Icons.arrow_back,
         onLeadingPressed: () => Navigator.pop(context),
+        actions: [
+          IconButton(
+            icon: Icon(_isFavorite ? Icons.favorite : Icons.favorite_border, color: Colors.red),
+            onPressed: _toggleFavorite,
+          ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Información del medicamento
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  medicamento['nombreMedicamento'] ?? medicamento['nombre'] ?? '',
+                  widget.medicamento['nombreMedicamento'] ?? widget.medicamento['nombre'] ?? '',
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  medicamento['descripcion'] ?? '',
+                  widget.medicamento['descripcion'] ?? '',
                   style: const TextStyle(fontSize: 16),
                 ),
                 const SizedBox(height: 16),
                 Center(
                   child: Image.network(
-                    medicamento['imagenUrl'] ?? '',
+                    widget.medicamento['imagenUrl'] ?? '',
                     height: 200,
                     fit: BoxFit.contain,
                     errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, size: 100),
@@ -150,20 +186,17 @@ class DetallesMedicamentoScreen extends StatelessWidget {
           Expanded(
             child: FutureBuilder<List<Map<String, dynamic>>>(
               future: _fetchFarmacias(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
+              builder: (context, snap) {
+                if (snap.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
+                if (snap.hasError) {
+                  return Center(child: Text('Error: \${snap.error}'));
                 }
-                
-                final farms = snapshot.data ?? [];
+                final farms = snap.data ?? [];
                 if (farms.isEmpty) {
                   return const Center(child: Text('No hay farmacias con existencia'));
                 }
-                
                 return ListView.builder(
                   itemCount: farms.length,
                   itemBuilder: (context, index) {
@@ -174,22 +207,12 @@ class DetallesMedicamentoScreen extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(vertical: 8.0),
                         child: ListTile(
                           leading: const Icon(Icons.location_on, color: Colors.red),
-                          title: Text('${f['nombre']} (${f['sucursal']})'),
+                          title: Text("${f['nombre']} (${f['sucursal']})"),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Horario: ${f['horario']}'),
-                              Text('Precio: \$${f['precio']}'),
-                              const SizedBox(height: 4),
-                              TextButton(
-                                onPressed: () => _openLocation(f['latLng']),
-                                child: const Text('Abrir ubicación'),
-                                style: TextButton.styleFrom(
-                                  padding: EdgeInsets.zero,
-                                  minimumSize: const Size(50, 20),
-                                  alignment: Alignment.centerLeft,
-                                ),
-                              ),
+                              Text("Horario: \${f['horario']]}"),
+                              Text("Precio: \$\${f['precio']}")
                             ],
                           ),
                           isThreeLine: true,

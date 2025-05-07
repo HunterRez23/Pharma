@@ -1,0 +1,2 @@
+C:/Users/omarz/Documents/Pharma/pharmacare/android/app/.cxx/Debug/i375q3b3/arm64-v8a/CMakeFiles/edit_cache.dir
+C:/Users/omarz/Documents/Pharma/pharmacare/android/app/.cxx/Debug/i375q3b3/arm64-v8a/CMakeFiles/rebuild_cache.dir

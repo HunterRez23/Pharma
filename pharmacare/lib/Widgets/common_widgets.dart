@@ -1,4 +1,3 @@
-// lib/widgets/common_widgets.dart
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -15,6 +14,9 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// Acción al pulsar icono izquierdo
   final VoidCallback onLeadingPressed;
 
+  /// Acciones adicionales en la AppBar (opcional)
+  final List<Widget>? actions;
+
   /// Callback al enviar búsqueda (requerido si showSearch == true)
   final ValueChanged<String>? onSearchSubmitted;
   /// Acción del botón de filtro (opcional, si showSearch)
@@ -28,6 +30,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.title,
     this.leadingIcon,
     required this.onLeadingPressed,
+    this.actions,
     this.onSearchSubmitted,
     this.onFilterPressed,
     this.onNotificationsPressed,
@@ -68,15 +71,19 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               style: const TextStyle(color: Colors.white, fontSize: 20),
             ),
       actions: showSearch
-          ? <Widget>[ if (onFilterPressed != null)
-            
+          ? <Widget>[ 
+              if (onFilterPressed != null)
+                IconButton(
+                  icon: const Icon(Icons.filter_list, color: Colors.white),
+                  onPressed: onFilterPressed,
+                ),
               if (onNotificationsPressed != null)
                 IconButton(
                   icon: const Icon(Icons.notifications, color: Colors.white),
                   onPressed: onNotificationsPressed,
                 ),
             ]
-          : null,
+          : actions,
     );
   }
 
