@@ -6,7 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pharmacare/Screens/FichaMedicaScreen.dart';
 import 'package:pharmacare/Screens/PerfilScreen.dart';
-
+import 'package:pharmacare/Screens/chatSeguimiento.dart'; // Ajusta la ruta si es distinta
 import '../Widgets/common_widgets.dart';
 import 'detallesMedicamentos.dart';
 import '../Screens/Medicos.dart';
@@ -220,15 +220,27 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _selectedIndex,
         onTap: (i) {
-          if (i == 1) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const Medicos()),
-            );
-          }
           setState(() {
             _selectedIndex = i;
           });
+
+          if (i == 0) {
+            // Farmacias o pantalla principal
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const PantallaPrincipal()),
+            );
+          } else if (i == 1) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const Medicos()),
+            );
+          } else if (i == 2) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const ChatSeguimiento()),
+            );
+          }
         },
       ),
     );
