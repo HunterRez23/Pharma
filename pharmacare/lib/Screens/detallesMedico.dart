@@ -32,7 +32,7 @@ class DetallesMedico extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return const FormularioAgendarCita(); // Usa el widget externo
+       return FormularioAgendarCita(nombreDoctor: doctor.name); // ← Necesario para guardar bien la cita
       },
     );
   }

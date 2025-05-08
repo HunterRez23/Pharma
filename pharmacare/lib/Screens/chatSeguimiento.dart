@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'chatMedico.dart';
+import '../widgets/common_widgets.dart'; // Asegúrate de que esta ruta sea correcta
 
 class ChatSeguimiento extends StatelessWidget {
   const ChatSeguimiento({super.key});
@@ -7,70 +8,77 @@ class ChatSeguimiento extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF2F80ED),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Centro de mensajes',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        centerTitle: true,
+      backgroundColor: Colors.white,
+
+      appBar: CustomAppBar(
+        showSearch: false,
+        title: 'Centro de mensajes',
+        onLeadingPressed: () => Navigator.pop(context),
       ),
+
+      bottomNavigationBar: CustomBottomNavBar(
+        currentIndex: 2,
+        onTap: (index) {
+          // Aquí puedes agregar la lógica de navegación real
+        },
+      ),
+
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
         children: [
           _buildMensajeCard(
             context,
-            nombre: 'Nombre medico',
-            mensaje: 'Texto mensaje',
+            nombre: 'Dr. Juan Pérez',
+            mensaje: 'Hola, ¿cómo te has sentido desde la última consulta?',
             hora: '12:00',
-            imagenUrl:
-                'https://via.placeholder.com/150', // Puedes reemplazar esto
           ),
-          // Puedes duplicar esto para más mensajes
+          _buildMensajeCard(
+            context,
+            nombre: 'Dra. Lucía Gómez',
+            mensaje: 'Te he enviado un archivo con tus resultados.',
+            hora: '10:45',
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildMensajeCard(BuildContext context,
-      {required String nombre,
-      required String mensaje,
-      required String hora,
-      required String imagenUrl}) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 2,
+  Widget _buildMensajeCard(
+    BuildContext context, {
+    required String nombre,
+    required String mensaje,
+    required String hora,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         leading: CircleAvatar(
-          backgroundImage: NetworkImage(imagenUrl),
-          radius: 25,
+          backgroundColor: Colors.grey.shade200,
+          radius: 24,
+          child: const Icon(Icons.person, color: Colors.grey),
         ),
         title: Text(
           nombre,
           style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            fontSize: 15,
           ),
         ),
         subtitle: Row(
           children: [
-            Text(
-              mensaje,
-              style: const TextStyle(fontSize: 14),
+            Expanded(
+              child: Text(
+                mensaje,
+                style: const TextStyle(fontSize: 13),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-            const SizedBox(width: 4),
             const Icon(Icons.expand_more, size: 16, color: Colors.grey),
           ],
         ),
@@ -82,17 +90,16 @@ class ChatSeguimiento extends StatelessWidget {
           ),
         ),
         onTap: () {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => ChatMedico(
-        nombre: nombre,
-        imagenUrl: imagenUrl,
-      ),
-    ),
-  );
-},
-
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ChatMedico(
+                nombre: nombre,
+                imagenUrl: '', // Puedes cargar una imagen real si la tienes
+              ),
+            ),
+          );
+        },
       ),
     );
   }

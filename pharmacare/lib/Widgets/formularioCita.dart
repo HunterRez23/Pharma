@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class FormularioAgendarCita extends StatefulWidget {
-  const FormularioAgendarCita({super.key});
+  final String nombreDoctor;
+
+  const FormularioAgendarCita({super.key, required this.nombreDoctor});
 
   @override
   State<FormularioAgendarCita> createState() => _FormularioAgendarCitaState();
@@ -10,6 +14,7 @@ class FormularioAgendarCita extends StatefulWidget {
 class _FormularioAgendarCitaState extends State<FormularioAgendarCita> {
   DateTime? _fechaSeleccionada;
   TimeOfDay? _horaSeleccionada;
+  final TextEditingController _motivoController = TextEditingController();
 
   Future<void> _seleccionarFecha(BuildContext context) async {
     final DateTime? fecha = await showDatePicker(
@@ -19,9 +24,7 @@ class _FormularioAgendarCitaState extends State<FormularioAgendarCita> {
       lastDate: DateTime(2100),
     );
     if (fecha != null) {
-      setState(() {
-        _fechaSeleccionada = fecha;
-      });
+      setState(() => _fechaSeleccionada = fecha);
     }
   }
 
@@ -31,9 +34,52 @@ class _FormularioAgendarCitaState extends State<FormularioAgendarCita> {
       initialTime: TimeOfDay.now(),
     );
     if (hora != null) {
-      setState(() {
-        _horaSeleccionada = hora;
-      });
+      setState(() => _horaSeleccionada = hora);
+    }
+  }
+
+  Future<void> _guardarCita() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
+    if (uid == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Usuario no autenticado')),
+      );
+      return;
+    }
+
+    if (_fechaSeleccionada == null ||
+        _horaSeleccionada == null ||
+        _motivoController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Completa todos los campos')),
+      );
+      return;
+    }
+
+    final cita = {
+      'doctor': widget.nombreDoctor,
+      'motivo': _motivoController.text.trim(),
+      'fecha': _fechaSeleccionada!.toIso8601String(),
+      'hora': _horaSeleccionada!.format(context),
+      'timestamp': FieldValue.serverTimestamp(),
+    };
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(uid)
+          .collection('Citas')
+          .add(cita);
+
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cita agendada exitosamente')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al guardar la cita: $e')),
+      );
     }
   }
 
@@ -69,6 +115,7 @@ class _FormularioAgendarCitaState extends State<FormularioAgendarCita> {
             ),
             const SizedBox(height: 16),
             TextField(
+              controller: _motivoController,
               decoration: InputDecoration(
                 labelText: 'Motivo de la consulta',
                 border: OutlineInputBorder(
@@ -118,7 +165,7 @@ class _FormularioAgendarCitaState extends State<FormularioAgendarCita> {
             const SizedBox(height: 16),
             GestureDetector(
               onTap: () {
-                // Acción para encuesta
+                // Acción para encuesta futura
               },
               child: const Text(
                 '¿Desea contestar unas preguntas para mejorar?',
@@ -130,18 +177,13 @@ class _FormularioAgendarCitaState extends State<FormularioAgendarCita> {
               ),
             ),
             const SizedBox(height: 24),
-
-            // 👇 Nuevo botón para agendar cita
             Center(
               child: ElevatedButton(
-                onPressed: () {
-                  // Aquí se implementaría la lógica para guardar/agendar la cita
-                },
+                onPressed: _guardarCita,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2F80ED),
                   foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
                   ),

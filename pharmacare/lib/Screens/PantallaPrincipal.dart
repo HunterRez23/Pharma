@@ -1,4 +1,3 @@
-// lib/Screens/PantallaPrincipal.dart
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -6,11 +5,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pharmacare/Screens/FichaMedicaScreen.dart';
 import 'package:pharmacare/Screens/PerfilScreen.dart';
-import 'package:pharmacare/Screens/chatSeguimiento.dart'; // Ajusta la ruta si es distinta
+import 'package:pharmacare/Screens/chatSeguimiento.dart';
+import 'package:pharmacare/Screens/FavoritosScreen.dart';
+import 'package:pharmacare/Screens/Medicos.dart';
+import 'package:pharmacare/Screens/citasUsuarios.dart'; // ✅ Importación corregida
 import '../Widgets/common_widgets.dart';
 import 'detallesMedicamentos.dart';
-import '../Screens/Medicos.dart';
-import 'FavoritosScreen.dart';
 
 class PantallaPrincipal extends StatefulWidget {
   const PantallaPrincipal({Key? key}) : super(key: key);
@@ -24,8 +24,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   int _selectedIndex = 0;
 
   Future<List<Map<String, dynamic>>> getMedicamentos() async {
-    final snapshot =
-        await FirebaseFirestore.instance.collection('Medicamento').get();
+    final snapshot = await FirebaseFirestore.instance.collection('Medicamento').get();
     final meds = snapshot.docs.map((doc) {
       final data = doc.data() as Map<String, dynamic>;
       data['id'] = doc.id;
@@ -47,6 +46,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
+
     return Scaffold(
       key: _scaffoldKey,
       appBar: CustomAppBar(
@@ -54,9 +54,9 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         leadingIcon: Icons.menu,
         onLeadingPressed: () => _scaffoldKey.currentState?.openDrawer(),
         onSearchSubmitted: (q) => ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Buscar: \$q'))),
-        onFilterPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Filtro aún no implementado'))),
+            .showSnackBar(SnackBar(content: Text('Buscar: $q'))),
+        onFilterPressed: () => ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Filtro aún no implementado'))),
         onNotificationsPressed: () => ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('Notificaciones'))),
       ),
@@ -71,8 +71,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                 children: [
                   Icon(Icons.person, size: 50, color: Colors.white),
                   SizedBox(height: 8),
-                  Text('Admin',
-                      style: TextStyle(color: Colors.white, fontSize: 16)),
+                  Text('Admin', style: TextStyle(color: Colors.white, fontSize: 16)),
                 ],
               ),
             ),
@@ -85,7 +84,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
               leading: const Icon(Icons.person),
               title: const Text('Perfil'),
               onTap: () {
-                Navigator.pop(context); // cierra el drawer
+                Navigator.pop(context);
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const PerfilScreen()),
@@ -95,8 +94,13 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
             ListTile(
               leading: const Icon(Icons.calendar_today),
               title: const Text('Mis citas'),
-              onTap: () => ScaffoldMessenger.of(context)
-                  .showSnackBar(const SnackBar(content: Text('Mis citas'))),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CitasUsuario()),
+                );
+              },
             ),
             ListTile(
               leading: const Icon(Icons.favorite),
@@ -119,7 +123,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
               leading: const Icon(Icons.medical_services),
               title: const Text('Ficha médica'),
               onTap: () {
-                Navigator.pop(context); // cierra el drawer
+                Navigator.pop(context);
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const FichaMedicaScreen()),
@@ -167,17 +171,13 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     }
                     final meds = snapMeds.data ?? [];
                     if (meds.isEmpty) {
-                      return const Center(
-                          child: Text('No hay medicamentos disponibles'));
+                      return const Center(child: Text('No hay medicamentos disponibles'));
                     }
 
                     final half = (meds.length / 2).ceil();
                     final descuento = meds.sublist(0, half);
                     final comunes = meds.sublist(half);
-
-                    final favoritosMed = meds
-                        .where((med) => favIds.contains(med['id']))
-                        .toList();
+                    final favoritosMed = meds.where((med) => favIds.contains(med['id'])).toList();
 
                     final sections = <Widget>[];
 
@@ -225,7 +225,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           });
 
           if (i == 0) {
-            // Farmacias o pantalla principal
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (_) => const PantallaPrincipal()),
