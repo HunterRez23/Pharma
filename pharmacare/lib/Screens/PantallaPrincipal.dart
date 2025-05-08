@@ -6,9 +6,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pharmacare/Screens/FichaMedicaScreen.dart';
 import 'package:pharmacare/Screens/PerfilScreen.dart';
 import 'package:pharmacare/Screens/chatSeguimiento.dart';
-import 'package:pharmacare/Screens/FavoritosScreen.dart';
 import 'package:pharmacare/Screens/Medicos.dart';
-import 'package:pharmacare/Screens/citasUsuarios.dart'; // ✅ Importación corregida
+import 'package:pharmacare/Screens/FavoritosScreen.dart';
+import 'package:pharmacare/Screens/citasUsuarios.dart';
 import '../Widgets/common_widgets.dart';
 import 'detallesMedicamentos.dart';
 
@@ -22,6 +22,14 @@ class PantallaPrincipal extends StatefulWidget {
 class _PantallaPrincipalState extends State<PantallaPrincipal> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _selectedIndex = 0;
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   Future<List<Map<String, dynamic>>> getMedicamentos() async {
     final snapshot = await FirebaseFirestore.instance.collection('Medicamento').get();
@@ -43,22 +51,69 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     );
   }
 
+  void _onSearchChanged(String text) {
+    setState(() {
+      _searchQuery = text.trim().toLowerCase();
+    });
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    setState(() {
+      _searchQuery = '';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
       key: _scaffoldKey,
-      appBar: CustomAppBar(
-        showSearch: true,
-        leadingIcon: Icons.menu,
-        onLeadingPressed: () => _scaffoldKey.currentState?.openDrawer(),
-        onSearchSubmitted: (q) => ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Buscar: $q'))),
-        onFilterPressed: () => ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Filtro aún no implementado'))),
-        onNotificationsPressed: () => ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Notificaciones'))),
+      appBar: AppBar(
+        backgroundColor: Colors.blue,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.menu, color: Colors.white),
+          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+        ),
+        title: Container(
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: TextField(
+            controller: _searchController,
+            onChanged: _onSearchChanged,
+            textInputAction: TextInputAction.search,
+            decoration: InputDecoration(
+              hintText: 'Buscar medicamentos',
+              border: InputBorder.none,
+              prefixIcon: const Icon(Icons.search, color: Colors.grey),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, color: Colors.grey),
+                      onPressed: _clearSearch,
+                    )
+                  : null,
+            ),
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.filter_list, color: Colors.white),
+            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Filtro aún no implementado')),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.notifications, color: Colors.white),
+            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Notificaciones')),
+            ),
+          ),
+        ],
       ),
       drawer: Drawer(
         child: ListView(
@@ -85,10 +140,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
               title: const Text('Perfil'),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const PerfilScreen()),
-                );
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const PerfilScreen()));
               },
             ),
             ListTile(
@@ -96,10 +148,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
               title: const Text('Mis citas'),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const CitasUsuario()),
-                );
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const CitasUsuario()));
               },
             ),
             ListTile(
@@ -107,34 +156,30 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
               title: const Text('Favoritos'),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const FavoritosScreen()),
-                );
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritosScreen()));
               },
             ),
             ListTile(
               leading: const Icon(Icons.category),
               title: const Text('Categorías'),
-              onTap: () => ScaffoldMessenger.of(context)
-                  .showSnackBar(const SnackBar(content: Text('Categorías'))),
+              onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Categorías')),
+              ),
             ),
             ListTile(
               leading: const Icon(Icons.medical_services),
               title: const Text('Ficha médica'),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const FichaMedicaScreen()),
-                );
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const FichaMedicaScreen()));
               },
             ),
             ListTile(
               leading: const Icon(Icons.settings),
               title: const Text('Configuración'),
-              onTap: () => ScaffoldMessenger.of(context)
-                  .showSnackBar(const SnackBar(content: Text('Configuración'))),
+              onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Configuración')),
+              ),
             ),
             const Divider(),
             ListTile(
@@ -150,37 +195,52 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       ),
       body: user == null
           ? const Center(child: Text('Debes iniciar sesión para ver contenido'))
-          : StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('usuarios')
-                  .doc(user.uid)
-                  .collection('favoritos')
-                  .snapshots(),
-              builder: (ctxFav, snapFav) {
-                if (snapFav.connectionState != ConnectionState.active) {
+          : FutureBuilder<List<Map<String, dynamic>>>(
+              future: getMedicamentos(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                final favDocs = snapFav.data?.docs ?? [];
-                final favIds = favDocs.map((d) => d.id).toList();
+                final meds = snapshot.data ?? [];
 
-                return FutureBuilder<List<Map<String, dynamic>>>(
-                  future: getMedicamentos(),
-                  builder: (ctx, snapMeds) {
-                    if (snapMeds.connectionState == ConnectionState.waiting) {
+                final filtered = _searchQuery.isEmpty
+                    ? meds
+                    : meds.where((med) {
+                        final nombre = (med['nombreMedicamento'] ?? med['nombre'] ?? '')
+                            .toString()
+                            .toLowerCase();
+                        return nombre.startsWith(_searchQuery);
+                      }).toList();
+
+                if (_searchQuery.isNotEmpty) {
+                  return filtered.isEmpty
+                      ? Center(child: Text('No se encontró "$_searchQuery"'))
+                      : ListView(
+                          padding: const EdgeInsets.all(8),
+                          children: [
+                            _buildSection(title: 'Resultados', items: filtered),
+                          ],
+                        );
+                }
+
+                return StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('usuarios')
+                      .doc(user.uid)
+                      .collection('favoritos')
+                      .snapshots(),
+                  builder: (context, favSnap) {
+                    if (favSnap.connectionState != ConnectionState.active) {
                       return const Center(child: CircularProgressIndicator());
                     }
-                    final meds = snapMeds.data ?? [];
-                    if (meds.isEmpty) {
-                      return const Center(child: Text('No hay medicamentos disponibles'));
-                    }
 
+                    final favIds = favSnap.data?.docs.map((d) => d.id).toList() ?? [];
                     final half = (meds.length / 2).ceil();
                     final descuento = meds.sublist(0, half);
                     final comunes = meds.sublist(half);
                     final favoritosMed = meds.where((med) => favIds.contains(med['id'])).toList();
 
                     final sections = <Widget>[];
-
                     sections.add(const ImageCarousel(
                       images: [
                         'image/Similares.jpg',
@@ -188,31 +248,13 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                         'image/SuperFarma.jpg',
                       ],
                     ));
-                    sections.add(const SizedBox(height: 20));
-
                     if (favoritosMed.isNotEmpty) {
-                      sections.add(_buildSection(
-                        title: 'Tus favoritos',
-                        items: favoritosMed,
-                      ));
-                      sections.add(const Divider());
-                      sections.add(const SizedBox(height: 20));
+                      sections.add(_buildSection(title: 'Tus favoritos', items: favoritosMed));
                     }
+                    sections.add(_buildSection(title: 'En descuento', items: descuento));
+                    sections.add(_buildSection(title: 'Comunes', items: comunes));
 
-                    sections.add(_buildSection(
-                      title: 'Medicamentos en descuento',
-                      items: descuento,
-                    ));
-                    sections.add(const SizedBox(height: 10));
-                    sections.add(_buildSection(
-                      title: 'Medicamentos comunes',
-                      items: comunes,
-                    ));
-
-                    return SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: Column(children: sections),
-                    );
+                    return ListView(padding: const EdgeInsets.all(8), children: sections);
                   },
                 );
               },
@@ -220,26 +262,25 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _selectedIndex,
         onTap: (i) {
-          setState(() {
-            _selectedIndex = i;
-          });
+          if (i == _selectedIndex) return;
+          setState(() => _selectedIndex = i);
 
-          if (i == 0) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const PantallaPrincipal()),
-            );
-          } else if (i == 1) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const Medicos()),
-            );
-          } else if (i == 2) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const ChatSeguimiento()),
-            );
+          Widget destino;
+          switch (i) {
+            case 0:
+              destino = const PantallaPrincipal();
+              break;
+            case 1:
+              destino = const Medicos();
+              break;
+            case 2:
+              destino = const ChatSeguimiento();
+              break;
+            default:
+              return;
           }
+
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => destino));
         },
       ),
     );

@@ -5,11 +5,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 class ChatMedico extends StatefulWidget {
   final String nombre;
   final String imagenUrl;
+  final List<Map<String, dynamic>> mensajesIniciales;
 
   const ChatMedico({
     super.key,
     required this.nombre,
     required this.imagenUrl,
+    this.mensajesIniciales = const [],
   });
 
   @override
@@ -21,58 +23,125 @@ class _ChatMedicoState extends State<ChatMedico> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  @override
-  void initState() {
-    super.initState();
+  int _estadoConversacion = 0;
+  String _sintoma = '';
+  String _duracion = '';
+  bool _inicializado = false;
 
-    // Mensajes de ejemplo
-    _mensajes.addAll([
-      {
-        'texto': 'Hola, soy el Dr. Juan. ¿Cómo te sientes hoy?',
-        'hora': '12:00',
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_inicializado) return;
+
+    if (widget.mensajesIniciales.isNotEmpty) {
+      _mensajes.addAll(widget.mensajesIniciales);
+    } else if (widget.nombre == 'Evaluación post consulta') {
+      _mensajes.add({
+        'texto': 'Hola, bienvenido la prevaloración por IA.\nPor favor, escribe tu síntoma principal para comenzar.',
+        'hora': _horaActual(),
         'esMio': false,
-        'nombre': widget.nombre,
-      },
-      {
-        'texto': 'Hola doctor, me siento mejor. Gracias.',
-        'hora': '12:02',
-        'esMio': true,
-        'nombre': '',
-      },
-    ]);
+        'nombre': 'IA',
+      });
+    } else {
+      _mensajes.addAll([
+        {
+          'texto': 'Hola, soy el Dr. ${widget.nombre}. ¿Cómo te sientes hoy?',
+          'hora': _horaActual(),
+          'esMio': false,
+          'nombre': widget.nombre,
+        },
+        {
+          'texto': 'Hola doctor, me siento mejor. Gracias.',
+          'hora': _horaActual(),
+          'esMio': true,
+          'nombre': '',
+        },
+      ]);
+    }
+
+    _inicializado = true;
+  }
+
+  String _horaActual() {
+    final now = TimeOfDay.now();
+    return now.format(context);
   }
 
   void _enviarMensaje() {
     final texto = _controller.text.trim();
     if (texto.isEmpty) return;
 
+    final hora = _horaActual();
+
     setState(() {
       _mensajes.add({
         'texto': texto,
-        'hora': TimeOfDay.now().format(context),
+        'hora': hora,
         'esMio': true,
         'nombre': '',
       });
     });
 
     _controller.clear();
+    _responderIA(texto);
+  }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent + 80,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+  void _responderIA(String input) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    setState(() {
+      if (_estadoConversacion == 0) {
+        _sintoma = input;
+        _mensajes.add({
+          'texto': 'Iniciando protocolo para "$_sintoma".\nResponde a las siguientes preguntas:',
+          'hora': _horaActual(),
+          'esMio': false,
+          'nombre': 'IA',
+        });
+        _mensajes.add({
+          'texto': '¿Desde cuándo tienes el $_sintoma?',
+          'hora': _horaActual(),
+          'esMio': false,
+          'nombre': 'IA',
+        });
+        _estadoConversacion++;
+      } else if (_estadoConversacion == 1) {
+        _duracion = input;
+        _mensajes.add({
+          'texto': 'Entendido: llevas "$_duracion".',
+          'hora': _horaActual(),
+          'esMio': false,
+          'nombre': 'IA',
+        });
+        _mensajes.add({
+          'texto': '¿Cómo calificarías la intensidad en una escala del 1 al 10?',
+          'hora': _horaActual(),
+          'esMio': false,
+          'nombre': 'IA',
+        });
+        _estadoConversacion++;
+      } else if (_estadoConversacion == 2) {
+        final intensidad = int.tryParse(input) ?? 0;
+        final descripcion = intensidad >= 7 ? 'alta' : intensidad >= 4 ? 'moderada' : 'leve';
+        _mensajes.add({
+          'texto': 'Intensidad $descripcion ($intensidad).',
+          'hora': _horaActual(),
+          'esMio': false,
+          'nombre': 'IA',
+        });
+        _estadoConversacion++;
+      }
     });
+
+    _scrollController.animateTo(
+      _scrollController.position.maxScrollExtent + 100,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
   }
 
   String _obtenerIniciales(String nombre) {
-    final partes = nombre.trim().split(RegExp(r'\s+'));
-    return partes.isEmpty
-        ? 'U'
-        : partes.length == 1
-            ? partes[0][0].toUpperCase()
-            : '${partes[0][0].toUpperCase()}${partes[1][0].toUpperCase()}';
+    return nombre == 'IA' ? 'IA' : nombre.trim().split(' ').map((e) => e[0]).take(2).join().toUpperCase();
   }
 
   Widget _buildMensajeBurbuja({
@@ -145,8 +214,7 @@ class _ChatMedicoState extends State<ChatMedico> {
                   borderRadius: BorderRadius.circular(25),
                   borderSide: BorderSide.none,
                 ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               ),
               style: const TextStyle(color: Colors.black),
               onSubmitted: (_) => _enviarMensaje(),
@@ -168,6 +236,7 @@ class _ChatMedicoState extends State<ChatMedico> {
 
   @override
   Widget build(BuildContext context) {
+    final esPrevaloracion = widget.nombre == 'Evaluación post consulta';
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF2F80ED),
@@ -176,9 +245,9 @@ class _ChatMedicoState extends State<ChatMedico> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Centro de mensajes',
-          style: TextStyle(
+        title: Text(
+          esPrevaloracion ? 'Prevaloración por IA' : 'Centro de mensajes',
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 18,
             fontWeight: FontWeight.bold,

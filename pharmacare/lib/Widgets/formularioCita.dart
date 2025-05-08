@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:pharmacare/Screens/chatMedico.dart';
 
 class FormularioAgendarCita extends StatefulWidget {
   final String nombreDoctor;
@@ -15,6 +16,7 @@ class _FormularioAgendarCitaState extends State<FormularioAgendarCita> {
   DateTime? _fechaSeleccionada;
   TimeOfDay? _horaSeleccionada;
   final TextEditingController _motivoController = TextEditingController();
+  bool _realizarEvaluacion = false;
 
   Future<void> _seleccionarFecha(BuildContext context) async {
     final DateTime? fecha = await showDatePicker(
@@ -72,10 +74,38 @@ class _FormularioAgendarCitaState extends State<FormularioAgendarCita> {
           .collection('Citas')
           .add(cita);
 
-      Navigator.pop(context);
+      Navigator.pop(context); // Cierra modal
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cita agendada exitosamente')),
       );
+
+      if (_realizarEvaluacion) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChatMedico(
+              nombre: 'Evaluación por IA',
+              imagenUrl: '',
+              mensajesIniciales: [
+                {
+                  'texto': 'Gracias. Iniciando prevaloración por IA.',
+                  'hora': TimeOfDay.now().format(context),
+                  'esMio': false,
+                  'nombre': 'IA',
+                },
+                {
+                  'texto': 'Por favor, escribe tu síntoma principal para comenzar.',
+                  'hora': TimeOfDay.now().format(context),
+                  'esMio': false,
+                  'nombre': 'IA',
+                },
+              ],
+            ),
+          ),
+        );
+      }
+
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al guardar la cita: $e')),
@@ -162,20 +192,23 @@ class _FormularioAgendarCitaState extends State<FormularioAgendarCita> {
               'Verifique la disponibilidad de la fecha y hora antes de agendar.',
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
-            const SizedBox(height: 16),
-            GestureDetector(
-              onTap: () {
-                // Acción para encuesta futura
-              },
-              child: const Text(
-                '¿Desea contestar unas preguntas para mejorar?',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF2F80ED),
-                  decoration: TextDecoration.underline,
-                ),
+            const SizedBox(height: 12),
+
+            // Checkbox de evaluación por IA
+            CheckboxListTile(
+              value: _realizarEvaluacion,
+              onChanged: (value) => setState(() {
+                _realizarEvaluacion = value ?? false;
+              }),
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              title: const Text(
+                'Realizar prevaloración por IA tras agendar',
+                style: TextStyle(fontSize: 14),
               ),
+              activeColor: Color(0xFF2F80ED),
             ),
+
             const SizedBox(height: 24),
             Center(
               child: ElevatedButton(
@@ -183,7 +216,8 @@ class _FormularioAgendarCitaState extends State<FormularioAgendarCita> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2F80ED),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
                   ),
