@@ -26,7 +26,10 @@ class _DetallesMedicamentoScreenState extends State<DetallesMedicamentoScreen> {
     super.initState();
     final user = FirebaseAuth.instance.currentUser;
     _uid = user?.uid ?? '';
-    _medId = widget.medicamento['id'] ?? widget.medicamento['nombreMedicamento'] ?? '';
+    _medId = widget.medicamento['id'] ??
+        widget.medicamento['nombreMedicamento'] ??
+        widget.medicamento['nombre'] ??
+        '';
     _loadFavorite();
   }
 
@@ -54,26 +57,35 @@ class _DetallesMedicamentoScreenState extends State<DetallesMedicamentoScreen> {
       } else {
         await favRef.set({
           'medicamentoId': _medId,
-          'nombre': widget.medicamento['nombreMedicamento'] ?? widget.medicamento['nombre'] ?? '',
+          'nombre': widget.medicamento['nombreMedicamento'] ??
+              widget.medicamento['nombre'] ??
+              '',
           'timestamp': FieldValue.serverTimestamp(),
         });
       }
       setState(() => _isFavorite = !_isFavorite);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_isFavorite ? 'Agregado a favoritos' : 'Eliminado de favoritos')),
+        SnackBar(
+          content: Text(_isFavorite
+              ? 'Agregado a favoritos'
+              : 'Eliminado de favoritos'),
+        ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: \$e')),
+        SnackBar(content: Text('Error: $e')),
       );
     }
   }
 
   Future<List<Map<String, dynamic>>> _fetchFarmacias() async {
-    final medName = widget.medicamento['nombreMedicamento'] ?? widget.medicamento['nombre'] ?? '';
+    final medName = widget.medicamento['nombreMedicamento'] ??
+        widget.medicamento['nombre'] ??
+        '';
     if (medName.isEmpty) return [];
     try {
-      final farmSnap = await FirebaseFirestore.instance.collection('Farmacias').get();
+      final farmSnap =
+          await FirebaseFirestore.instance.collection('Farmacias').get();
       final List<Map<String, dynamic>> lista = [];
       for (var farmaciaDoc in farmSnap.docs) {
         final farmaciaData = farmaciaDoc.data();
@@ -83,26 +95,35 @@ class _DetallesMedicamentoScreenState extends State<DetallesMedicamentoScreen> {
             .get();
         if (invSnap.docs.isNotEmpty) {
           final invData = invSnap.docs.first.data();
+          final horario = farmaciaData['horario'] ??
+              farmaciaData['Horario'] ??
+              '---';
+          final precio = invData['precio'] ??
+              invData['Precio'] ??
+              0;
           lista.add({
             'nombre': farmaciaData['nombre'] ?? '',
             'sucursal': farmaciaData['sucursal'] ?? '',
-            'horario': farmaciaData['Horario'] ?? '',
-            'latLng': farmaciaData['LatLng'] ?? '',
-            'precio': invData['precio'] ?? 0,
+            'horario': horario,
+            'latLng': farmaciaData['latLng'] ??
+                farmaciaData['LatLng'] ??
+                '',
+            'precio': precio,
           });
         }
       }
       return lista;
     } catch (e) {
-      print('Error al obtener farmacias: \$e');
+      print('Error al obtener farmacias: $e');
       return [];
     }
   }
 
   Future<void> _openLocation(String latLng) async {
     final coords = latLng.replaceAll(' ', '');
-    final geoUri = Uri.parse('geo:\$coords?q=\$coords');
-    final webUri = Uri.parse('https://www.google.com/maps/search/?api=1&query=\$coords');
+    final geoUri = Uri.parse('geo:$coords?q=$coords');
+    final webUri = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=$coords');
     try {
       await launchUrl(geoUri, mode: LaunchMode.externalApplication);
     } catch (_) {
@@ -121,7 +142,10 @@ class _DetallesMedicamentoScreenState extends State<DetallesMedicamentoScreen> {
         onLeadingPressed: () => Navigator.pop(context),
         actions: [
           IconButton(
-            icon: Icon(_isFavorite ? Icons.favorite : Icons.favorite_border, color: Colors.red),
+            icon: Icon(
+              _isFavorite ? Icons.favorite : Icons.favorite_border,
+              color: Colors.red,
+            ),
             onPressed: _toggleFavorite,
           ),
         ],
@@ -129,14 +153,18 @@ class _DetallesMedicamentoScreenState extends State<DetallesMedicamentoScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Detalles del medicamento
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.medicamento['nombreMedicamento'] ?? widget.medicamento['nombre'] ?? '',
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  widget.medicamento['nombreMedicamento'] ??
+                      widget.medicamento['nombre'] ??
+                      '',
+                  style: const TextStyle(
+                      fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -149,7 +177,8 @@ class _DetallesMedicamentoScreenState extends State<DetallesMedicamentoScreen> {
                     widget.medicamento['imagenUrl'] ?? '',
                     height: 200,
                     fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, size: 100),
+                    errorBuilder: (_, __, ___) =>
+                        const Icon(Icons.broken_image, size: 100),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -175,6 +204,7 @@ class _DetallesMedicamentoScreenState extends State<DetallesMedicamentoScreen> {
               ],
             ),
           ),
+
           const Divider(),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -183,6 +213,8 @@ class _DetallesMedicamentoScreenState extends State<DetallesMedicamentoScreen> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
           ),
+
+          // Lista de farmacias
           Expanded(
             child: FutureBuilder<List<Map<String, dynamic>>>(
               future: _fetchFarmacias(),
@@ -191,32 +223,39 @@ class _DetallesMedicamentoScreenState extends State<DetallesMedicamentoScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snap.hasError) {
-                  return Center(child: Text('Error: \${snap.error}'));
+                  return Center(child: Text('Error: ${snap.error}'));
                 }
                 final farms = snap.data ?? [];
                 if (farms.isEmpty) {
-                  return const Center(child: Text('No hay farmacias con existencia'));
+                  return const Center(
+                      child: Text('No hay farmacias con existencia'));
                 }
                 return ListView.builder(
                   itemCount: farms.length,
                   itemBuilder: (context, index) {
                     final f = farms[index];
                     return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: ListTile(
-                          leading: const Icon(Icons.location_on, color: Colors.red),
-                          title: Text("${f['nombre']} (${f['sucursal']})"),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text("Horario: \${f['horario']]}"),
-                              Text("Precio: \$\${f['precio']}")
-                            ],
-                          ),
-                          isThreeLine: true,
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      child: ListTile(
+                        leading:
+                            const Icon(Icons.location_on, color: Colors.red),
+                        title:
+                            Text("${f['nombre']} (${f['sucursal']})"),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if ((f['horario'] as String).isNotEmpty)
+                              Text("Horario: ${f['horario']}"),
+                            Text("Precio: \$${f['precio']}"),
+                          ],
                         ),
+                        isThreeLine: true,
+                        onTap: () {
+                          if ((f['latLng'] as String).isNotEmpty) {
+                            _openLocation(f['latLng']);
+                          }
+                        },
                       ),
                     );
                   },
@@ -225,7 +264,7 @@ class _DetallesMedicamentoScreenState extends State<DetallesMedicamentoScreen> {
             ),
           ),
         ],
-      ),
+      ),  
     );
   }
 }
